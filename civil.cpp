@@ -13,6 +13,7 @@ using namespace std;
 const double MAX_INIT_TECH = 3.0;
 const double CHILD_CIVIL_FRIENDSHIP = 100.0;
 
+// 包装double使其初始化为一个随机数
 class AiDouble
 {
    public:
@@ -21,7 +22,6 @@ class AiDouble
     AiDouble()
     {
         n = (newRandom.get() - 0.5) * 0.1;
-        // n = 0.0;
     }
 
     operator double()
@@ -49,24 +49,9 @@ class Civil : public Planet
     // 以下是策略参数
     double rateDev, rateAtk, rateCoop;
     double friendship[MAX_PLANET];  // 好感度
-    map<int, AiDouble> aiMap;  // 存储在各种情况下修改rate...的参数
+    map<int, AiDouble> aiMap;  // 存储在各种情境下修改rate...用的参数
 
-    // 随机初始化
-    Civil(Planet& _p)
-        : Planet(_p),
-          civilId(civilCount),
-          parentCivilId(-1),
-          childCivilCount(0),
-          birthTime(space.clock),
-          liveTime(0),
-          tech(newRandom.get() * MAX_INIT_TECH),
-          timeScale(space.curvtt(x, y)),
-          rateDev(newRandom.get()),
-          rateAtk(newRandom.get()),
-          rateCoop(newRandom.get())
-    {
-        ++civilCount;
-    }
+    Civil(Planet& _p);
 
     void debugPrint();
     void adjPara(int line, double& para, initializer_list<double> list);
@@ -87,6 +72,24 @@ void Civil::initCivils()
         for (int j = 0; j < civils.size(); ++j) civils[i].friendship[j] = 0;
 }
 
+// 随机初始化
+Civil::Civil(Planet& _p)
+    : Planet(_p),
+      civilId(civilCount),
+      parentCivilId(-1),
+      childCivilCount(0),
+      birthTime(space.clock),
+      liveTime(0),
+      tech(newRandom.get() * MAX_INIT_TECH),
+      timeScale(space.curvtt(x, y)),
+      rateDev(newRandom.get()),
+      rateAtk(newRandom.get()),
+      rateCoop(newRandom.get())
+{
+    ++civilCount;
+}
+
+// 目前写了详细和简略两种输出方式，调试时选一种
 void Civil::debugPrint()
 {
     // cout << id << endl;
@@ -123,7 +126,9 @@ void Civil::develop()
 
 void Civil::attack(Civil& target)
 {
-// 根据aiMap修改自己的rate...，参数为rate...，双方科技的比值，时间曲率的比值
+// 根据aiMap修改自己的rate...
+// 参数为自己的rate...，双方科技的比值，时间曲率的比值
+// 用行号表示情境
 #define tempMacro(a)                                                      \
     adjPara(__LINE__, a, {rateDev, rateAtk, rateCoop, tech / target.tech, \
                           timeScale / target.timeScale})
@@ -131,7 +136,7 @@ void Civil::attack(Civil& target)
     tempMacro(rateAtk);
     tempMacro(rateCoop);
 #undef tempMacro
-// 修改对方的参数
+// 修改对方的rate...和好感度
 #define tempMacro(a)                                                       \
     adjPara(__LINE__, a, {target.rateDev, target.rateAtk, target.rateCoop, \
                           target.tech / tech, target.timeScale / timeScale})
@@ -178,8 +183,6 @@ void Civil::attack(Civil& target)
     }
 }
 
-int civilId, parentCivilId, childCivilCount, birthTime, liveTime;
-
 void Civil::cooperate(Civil& target)
 {
 #define tempMacro(a)                                                      \
@@ -204,10 +207,11 @@ void Civil::cooperate(Civil& target)
     {
         double x = target.tech - tech;
         tech += 2.0 + 0.25 * (tanh(x) + 1.0) * abs(x);
-        // target.tech += 2.0 + 0.25 * (tanh(-x) + 1.0) * abs(x);
+        target.tech += 2.0 + 0.25 * (tanh(-x) + 1.0) * abs(x);
     }
 }
 
+// TODO：计算自己做各个动作的概率，然后选一个
 void Civil::action()
 {
     double invSize = 1.0 / civils.size();
