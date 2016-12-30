@@ -1,4 +1,4 @@
-// 网格模块 by wd
+// 网格 by wd
 
 #ifndef MESH_CPP
 #define MESH_CPP
@@ -18,7 +18,6 @@ const int MAX_MESH_SMALL = ceil(double(MAX_MESH) / MESH_SMALL_SCALE);
     for (int(i) = 0; (i) < MAX_MESH; ++(i)) \
         for (int(j) = 0; (j) < MAX_MESH; ++(j))
 
-// 接下来可能要对网格进行自适应细分
 template <class T>
 class Mesh
 {
@@ -51,12 +50,13 @@ class Mesh
                    jDecimal;
     }
 
-    // 实数位置的值只读，flag为重载标记
+    // 取实数位置的值，只读，flag为重载标记
     T operator()(double i, double j, bool flag)
     {
         return interpolar(i, j);
     }
 
+    // 返回放大s倍的网格
     Mesh<T> scale(double s)
     {
         Mesh<T> res;
@@ -65,10 +65,9 @@ class Mesh
         return res;
     }
 
-    // 将数组转换为单行字符串，与Mathematica的list格式兼容
-    string serialize()
+    // 将mesh转换为单行字符串，与Mathematica的list格式兼容
+    string serializeList()
     {
-        string res = "";
         stringstream ss;
         ss << "{";
         ss << "{";
@@ -85,13 +84,16 @@ class Mesh
             ss << "}";
         }
         ss << "}";
+
+        string res = "";
         ss >> res;
         return res;
     }
 
-    // 在流中输出数组，用空格和换行符分隔，列宽度固定
-    void printTable(ostream& ss)
+    // 将mesh转换为多行字符串，用空格和换行符分隔，列宽固定
+    string serializeTable()
     {
+        stringstream ss;
         for (int i = 0; i < MAX_MESH; ++i)
         {
             for (int j = 0; j < MAX_MESH; ++j)
@@ -99,6 +101,10 @@ class Mesh
             ss << endl;
         }
         ss << endl;
+
+        string res = "";
+        ss >> res;
+        return res;
     }
 };
 

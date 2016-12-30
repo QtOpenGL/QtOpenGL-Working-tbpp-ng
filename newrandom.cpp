@@ -1,3 +1,5 @@
+// 包装与随机数有关的函数
+
 #ifndef NEWRANDOM_CPP
 #define NEWRANDOM_CPP
 

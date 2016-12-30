@@ -5,7 +5,7 @@
 
 #include <cmath>
 #include <vector>
-#include "fside.cpp"
+#include "fout.cpp"
 #include "mesh.cpp"
 
 using namespace std;
@@ -97,7 +97,7 @@ class Space
             curvtt2(i, j) = 1.0;
         }
 
-        for (int k = 0; k < planets.size(); ++k)
+        for (size_t k = 0; k < planets.size(); ++k)
         {
             Planet& p = planets[k];
 
@@ -186,7 +186,7 @@ class Space
             curvtt(i, j) = 1.0;
         }
 
-        // cout << "{";
+        // fout << "{";
         for (int iterCount = 0; iterCount < MAX_ITER; ++iterCount)
         {
             updateCurv();
@@ -199,22 +199,22 @@ class Space
             }
             loss /= sqr(MAX_MESH);
 
-            // fSide << loss << endl;
+            // cout << loss << endl;
 
             curvxx = curvxx2;
             curvxy = curvxy2;
             curvyy = curvyy2;
             curvtt = curvtt2;
 
-            // cout << "{";
-            // cout << curvxx.serialize() << "," << endl;
-            // cout << curvxy.serialize() << "," << endl;
-            // cout << curvyy.serialize() << "," << endl;
-            // cout << curvtt.serialize() << "}," << endl;
+            // fout << "{";
+            // fout << curvxx.serializeList() << "," << endl;
+            // fout << curvxy.serializeList() << "," << endl;
+            // fout << curvyy.serializeList() << "," << endl;
+            // fout << curvtt.serializeList() << "}," << endl;
 
             if (loss < MIN_LOSS) break;
         }
-        // cout << "{}}" << endl;
+        // fout << "{}}" << endl;
     }
 };
 

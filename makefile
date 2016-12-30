@@ -1,10 +1,10 @@
-all: CXXFLAGS += -std=c++0x -Ofast -frename-registers
-all: main.exe
+all: CXXFLAGS += -std=c++0x -O3 -frename-registers -Wall
+all: main.exe space2.exe testserialize.exe
 
-allopt: CXXFLAGS += -std=c++0x -Ofast -fassociative-math -flto -fno-signed-zeros -fno-trapping-math -freciprocal-math -frename-registers -march=native
+allopt: CXXFLAGS += -std=c++0x -Ofast -fassociative-math -flto -fno-signed-zeros -fno-trapping-math -freciprocal-math -frename-registers -march=native -Wall
 allopt: main.exe
 
-debug: CXXFLAGS += -std=c++0x -Ddebug -Og
+debug: CXXFLAGS += -std=c++0x -Ddebug -Og -Wall
 debug: main.exe
 
 %.exe: %.cpp

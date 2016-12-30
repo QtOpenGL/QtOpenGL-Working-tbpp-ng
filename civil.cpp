@@ -3,7 +3,9 @@
 #ifndef CIVIL_CPP
 #define CIVIL_CPP
 
+#include <initializer_list>
 #include <iostream>
+#include <list>
 #include <map>
 #include "newrandom.cpp"
 #include "space.cpp"
@@ -34,6 +36,23 @@ class AiDouble
     }
 };
 
+// 舰队用来储存出发时的科技值，以及计算到目标的距离，便于触发事件
+class Fleet
+{
+   public:
+    int fleetId;
+    double leftDis;
+    double initDis;
+    double initTech;
+    Fleet(int _id, double _leftDis, double _initDis, double _initTech)
+        : fleetId(_id),
+          leftDis(_leftDis),
+          initDis(_initDis),
+          initTech(_initTech)
+    {
+    }
+};
+
 class Civil : public Planet
 {
    public:
@@ -45,7 +64,7 @@ class Civil : public Planet
     // id为星球编号，继承自Planet类，friendship的下标是id
     // civilId为文明编号，一个星球上可以先后有多个不同的文明
     // parentCivilId == -1表示初始或手动增加的文明
-    // deathTime < 0.0表示还没死
+    // deathTime < 0表示还没死
     int civilId, parentCivilId, childCivilCount, birthTime, deathTime;
 
     // 以下是状态参数
@@ -57,6 +76,9 @@ class Civil : public Planet
     map<int, AiDouble> aiMap;  // 存储在各种情境下修改rate...用的参数
 
     bool ruinMark;
+    double recordTech;
+
+    vector<Fleet> fleets;
 
     Civil(Planet& _p);
 
@@ -89,7 +111,7 @@ Civil::Civil(Planet& _p)
       parentCivilId(-1),
       childCivilCount(0),
       birthTime(space.clock),
-      deathTime(-1.0),
+      deathTime(-1),
       tech(newRandom.get() * MAX_INIT_TECH),
       timeScale(space.curvtt(x, y)),
       rateDev(newRandom.get()),
@@ -103,19 +125,20 @@ Civil::Civil(Planet& _p)
 // 目前写了详细和简略两种输出方式，调试时选一种
 void Civil::debugPrint()
 {
-    // cout << id << endl;
-    // cout << civilId << " " << parentCivilId << " " << childCivilCount << " "
-    // << space.clock - birthTime << endl;
-    // cout << tech << " " << timeScale << endl;
-    // cout << rateDev << " " << rateAtk << " " << rateCoop << endl;
-    // for (int i = 0; i < civils.size(); ++i) cout << friendship[i] << " ";
-    // cout << endl;
-    // for (auto iter = aiMap.begin(); iter != aiMap.end(); ++iter)
-    // cout << iter->first << " " << iter->second << endl;
-    // cout << endl;
-
-    cout << id << " " << civilId << " " << tech << " "
-         << space.clock - birthTime << " " << int(ruinMark) << endl;
+    //     cout << id << endl;
+    //     cout << civilId << " " << parentCivilId << " " << childCivilCount <<
+    //     " "
+    //     << space.clock - birthTime << endl;
+    //     cout << tech << " " << timeScale << endl;
+    //     cout << rateDev << " " << rateAtk << " " << rateCoop << endl;
+    //     for (int i = 0; i < civils.size(); ++i) cout << friendship[i] << " ";
+    //     cout << endl;
+    //     for (auto iter = aiMap.begin(); iter != aiMap.end(); ++iter)
+    //     cout << iter->first << " " << iter->second << endl;
+    //     cout << endl;
+    //
+    //    cout << id << " " << civilId << " " << tech << " "
+    //         << space.clock - birthTime << " " << int(ruinMark) << endl;
 }
 
 double Civil::aiMix(int mainKey, initializer_list<double> list)
@@ -139,11 +162,14 @@ bool Civil::detect(Civil& target)
         if (space.getDis(civils[id].x, civils[id].y, target.x, target.y) <
             detectDis)
         {
-            if (target.ruinMark)
+            double remainTech =
+                target.recordTech *
+                exp(RUIN_TECH_REDUCE * (space.clock - target.deathTime));
+            if (target.ruinMark && remainTech > tech)
             {
-                // 探测到废墟则科技加成。加成量随时间而减少。
-                tech += target.tech * exp(-RUIN_TECH_REDUCE *
-                                          (space.clock - target.deathTime));
+                // 探测到废墟且废墟剩余科技大于己方科技则科技加成，加成值为剩余科技值。
+                // 剩余科技值随时间而减少。
+                tech += remainTech;
                 target.ruinMark = false;
             }
             return true;
@@ -201,6 +227,7 @@ void Civil::attack(Civil& target)
         if (exp(-tech / target.tech) < desChance)
         {
             // 殖民
+            civilMuseum.push_back(target);
             target.civilId = civilCount;
             ++civilCount;
             target.parentCivilId = civilId;
@@ -231,6 +258,9 @@ void Civil::attack(Civil& target)
             // 成为废墟。放置废墟标志，记录科技值，产生新文明
             // TODO：废墟被探测到时探测方技术爆炸
             target.ruinMark = true;
+            target.recordTech = target.tech;
+            //            target.lastCivilId = civilMuseum.size()+1;
+            civilMuseum.push_back(target);
             // civilRuins.push_back(target);
 
             // 产生随机文明
@@ -284,8 +314,9 @@ void Civil::cooperate(Civil& target)
 void Civil::action()
 {
     // 废墟星球就不参与行动了
-    if (civils[id].ruinMark) return;
+    //    if (civils[id].ruinMark) return;
 
+    //  先对内动作：发展
     double invSize = 1.0 / civils.size();
     // 目前有1/3概率发展，1/3概率攻击，1/3概率合作
     double choice = newRandom.get();
@@ -294,46 +325,67 @@ void Civil::action()
         // cout << id << " develop" << endl;
         develop();
     }
-    else if (choice < 0.67)
+
+    // 再进行对外动作：攻击、合作。载体为舰队。
+    // 解决舰队航行时对目标文明重复动作问题：行动时检查已经存在的舰队组，
+    // 如果有相应舰队则继续该舰队行动，否则派出新舰队。
+
+    for (int i = 0; i < civils.size(); i++)
     {
-        // 找一个目标攻击
-        // 没有找到合适的目标就什么都不做
-        for (int i = 0; i < civils.size(); ++i)
+        for (int j = 0; j < fleets.size(); j++)
         {
-            if (i == id) continue;
-            if (civils[i].ruinMark) continue;
-            if (newRandom.get() < invSize &&
-                exp(rateAtk) * (-friendship[i] + 1.0) > 1.0)
+            // 舰队已经存在
+            if (fleets[j].fleetId == civils[i].id)
             {
-                // cout << id << " attack " << i << endl;
-                attack(civils[i]);
-                break;
+                fleets[j].leftDis -= 1;
+                //已经到达，执行行动
+                if (fleets[j].leftDis == fleets[j].initDis)
+                {
+                    if (choice < 0.67 && choice >= 0.33)
+                    {
+                        // 找一个目标攻击
+                        // 没有找到合适的目标就什么都不做
+                        for (int i = 0; i < civils.size(); ++i)
+                        {
+                            if (i == id) continue;
+                            if (civils[i].ruinMark) continue;
+                            if (newRandom.get() < invSize &&
+                                exp(rateAtk) * (-friendship[i] + 1.0) > 1.0)
+                            {
+                                // cout << id << " attack " << i << endl;
+                                attack(civils[i]);
+                                break;
+                            }
+                        }
+                    }
+                    if (choice >= 0.67)
+                    {
+                        // 找一个目标合作
+                        // 没有找到合适的目标就什么都不做
+                        for (int i = 0; i < civils.size(); ++i)
+                        {
+                            if (i == id) continue;
+                            if (civils[i].ruinMark) continue;
+                            if (newRandom.get() < invSize &&
+                                exp(rateCoop) * (friendship[i] + 1.0) > 1.0)
+                            {
+                                // cout << id << " cooperate " << i << endl;
+                                cooperate(civils[i]);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
-        }
-    }
-    else
-    {
-        // 找一个目标合作
-        // 没有找到合适的目标就什么都不做
-        for (int i = 0; i < civils.size(); ++i)
-        {
-            if (i == id) continue;
-            if (civils[i].ruinMark) continue;
-            if (newRandom.get() < invSize &&
-                exp(rateCoop) * (friendship[i] + 1.0) > 1.0)
+            // 舰队不存在，产生舰队
+            else
             {
-                // cout << id << " cooperate " << i << endl;
-                cooperate(civils[i]);
-                break;
+                fleets.push_back(Fleet(
+                    civils[i].id, space.getDis(x, y, civils[i].x, civils[i].y),
+                    space.getDis(x, y, civils[i].x, civils[i].y), tech));
             }
         }
     }
 }
-
-// 定义一种类叫事件 数组 存储各种事件及其数目
-// 触发完事件的话删掉它并在原处添加新事件，否则后面元素依次前移，浪费时间
-// 事件总数减1 事件排列顺序无关紧要
-// 事件池；创造一个表示攻击的对象，倒计时，延迟触发。
-// 计算行动概率
 
 #endif

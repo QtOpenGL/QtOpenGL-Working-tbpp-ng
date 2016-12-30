@@ -19,10 +19,7 @@ int main()
     space.calcCurv();
 
     // 初始化文明
-    for (int i = 0; i < planets.size(); ++i)
-    {
-        civils.push_back(Civil(planets[i]));
-    }
+    for (auto& i : planets) civils.push_back(Civil(i));
     civils[0].tech = 10.0;
     Civil::initCivils();
 
@@ -31,15 +28,9 @@ int main()
     {
         cout << "round " << mainLoopCount << " " << civilMuseum.size() << endl
              << endl;
-        for (int i = 0; i < civils.size(); ++i)
-        {
-            civils[i].action();
-        }
+        for (auto& i : civils) i.action();
         cout << endl;
-        for (int i = 0; i < civils.size(); ++i)
-        {
-            civils[i].debugPrint();
-        }
+        for (auto& i : civils) i.debugPrint();
         cout << endl;
         ++space.clock;
     }
