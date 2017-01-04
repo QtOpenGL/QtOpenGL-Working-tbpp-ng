@@ -1,21 +1,16 @@
-#include <ctime>
-#include <iostream>
 #include "civil.cpp"
-#include "newrandom.cpp"
-#include "space.cpp"
 
 using namespace std;
 
-const int MAX_MAIN_LOOP = 100;
+const int MAX_MAIN_LOOP = 10;
 
 int main()
 {
     // 初始化星球
-    planets.push_back(Planet(50.0, 50.0, 100.0));
+    planets.push_back(Planet(Point(50.0, 50.0), 100.0));
     for (int i = 1; i < MAX_PLANET; ++i)
-        planets.push_back(Planet(newRandom.get() * 100.0,
-                                 newRandom.get() * 100.0,
-                                 newRandom.get() * 1.0));
+        planets.push_back(
+            Planet(newRandom.getPoint() * 100.0, newRandom.get() * 1.0));
     space.calcCurv();
 
     // 初始化文明

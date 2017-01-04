@@ -7,7 +7,6 @@
 #include <iostream>
 #include <list>
 #include <map>
-#include "newrandom.cpp"
 #include "space.cpp"
 
 using namespace std;
@@ -125,17 +124,16 @@ Civil::Civil(Planet& _p)
 // 目前写了详细和简略两种输出方式，调试时选一种
 void Civil::debugPrint()
 {
-    //     cout << id << endl;
-    //     cout << civilId << " " << parentCivilId << " " << childCivilCount <<
-    //     " "
-    //     << space.clock - birthTime << endl;
-    //     cout << tech << " " << timeScale << endl;
-    //     cout << rateDev << " " << rateAtk << " " << rateCoop << endl;
-    //     for (int i = 0; i < civils.size(); ++i) cout << friendship[i] << " ";
-    //     cout << endl;
-    //     for (auto iter = aiMap.begin(); iter != aiMap.end(); ++iter)
-    //     cout << iter->first << " " << iter->second << endl;
-    //     cout << endl;
+    cout << id << " " << x << " " << y << " " << mass << endl;
+    cout << civilId << " " << parentCivilId << " " << childCivilCount << " "
+         << space.clock - birthTime << endl;
+    cout << tech << " " << timeScale << endl;
+    cout << rateDev << " " << rateAtk << " " << rateCoop << endl;
+    for (int i = 0; i < civils.size(); ++i) cout << friendship[i] << " ";
+    cout << endl;
+    for (auto iter = aiMap.begin(); iter != aiMap.end(); ++iter)
+        cout << iter->first << " " << iter->second << endl;
+    cout << endl;
     //
     //    cout << id << " " << civilId << " " << tech << " "
     //         << space.clock - birthTime << " " << int(ruinMark) << endl;

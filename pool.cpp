@@ -1,4 +1,5 @@
 // 对象池
+// 支持O(1)的插入与删除，O(n)的无序遍历
 
 #ifndef POOL_CPP
 #define POOL_CPP
@@ -6,13 +7,13 @@
 template <class T, size_t MAX_POOL>
 class Pool
 {
-   public:
+   private:
     T p[MAX_POOL];
     size_t _size;
 
-    Pool()
+   public:
+    Pool()：_size(0)
     {
-        _size = 0;
     }
 
     T& operator[](size_t i)

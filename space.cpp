@@ -5,30 +5,27 @@
 
 #include <cmath>
 #include <vector>
-#include "fout.cpp"
 #include "mesh.cpp"
+#include "utils.cpp"
 
 using namespace std;
 
-const int MAX_PLANET = 100;
+const int MAX_PLANET = 10;
 const double G_CONST = 0.1;   // 引力强度
 const double RG_CONST = 1.2;  // 与黑洞形状有关，必须大于9/8
 const int MAX_ITER = 10;
 const double MIN_LOSS = 1.0e-7;
 const double MIN_DIS_SEG_LEN = 1.0;
 
-#define sqr(x) ((x) * (x))
-
-class Planet
+class Planet : public Point
 {
    public:
     static int planetCount;
 
     int id;
-    double x, y, mass;
+    double mass;
 
-    Planet(double _x, double _y, double _mass)
-        : id(planetCount), x(_x), y(_y), mass(_mass)
+    Planet(Point _p, double _mass) : Point(_p), id(planetCount), mass(_mass)
     {
         ++planetCount;
     }
@@ -99,7 +96,7 @@ class Space
 
         for (size_t k = 0; k < planets.size(); ++k)
         {
-            Planet& p = planets[k];
+            const Planet& p = planets[k];
 
             // 计算当前星球到各个点的距离
             // 先在小网格中计算，再在大网格中插值
