@@ -20,20 +20,27 @@ const double MIN_DIS_SEG_LEN = 1.0;
 class Planet : public Point
 {
    public:
-    static int planetCount;
-
-    int id;
+    // planetId为星球编号，即Planet对象在planets中的位置
+    // civilId为文明编号，即Civil对象在civils中的位置
+    // 一个星球可能先后有多个文明，一个文明只对应一个星球
+    int planetId, civilId;
     double mass;
 
-    Planet(Point _p, double _mass) : Point(_p), id(planetCount), mass(_mass)
+    bool ruinMark;    // 是否为废墟
+    double lastTech;  // 上个文明的科技
+
+    Planet(int _planetId, int _civilId, Point _p, double _mass)
+        : Point(_p),
+          planetId(_planetId),
+          civilId(_civilId),
+          mass(_mass),
+          ruinMark(false),
+          lastTech(0.0)
     {
-        ++planetCount;
     }
 };
 
 vector<Planet> planets;
-
-int Planet::planetCount = 0;
 
 class Space
 {
@@ -183,7 +190,6 @@ class Space
             curvtt(i, j) = 1.0;
         }
 
-        // fout << "{";
         for (int iterCount = 0; iterCount < MAX_ITER; ++iterCount)
         {
             updateCurv();
@@ -196,22 +202,12 @@ class Space
             }
             loss /= sqr(MAX_MESH);
 
-            // cout << loss << endl;
-
             curvxx = curvxx2;
             curvxy = curvxy2;
             curvyy = curvyy2;
             curvtt = curvtt2;
-
-            // fout << "{";
-            // fout << curvxx.serializeList() << "," << endl;
-            // fout << curvxy.serializeList() << "," << endl;
-            // fout << curvyy.serializeList() << "," << endl;
-            // fout << curvtt.serializeList() << "}," << endl;
-
             if (loss < MIN_LOSS) break;
         }
-        // fout << "{}}" << endl;
     }
 };
 

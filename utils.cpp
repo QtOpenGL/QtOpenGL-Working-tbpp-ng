@@ -17,7 +17,12 @@ using namespace std;
 // 少量且实时的调试数据输出到cout
 ofstream fout("out.txt");
 
-// 将任何对象转换为二进制数组
+void test(int n)
+{
+    cout << "test " << n << endl;
+}
+
+// 将任何对象在内存中的数据转换为array
 // 注意：不包括对象内的指针指向的内容！
 template <typename T>
 array<unsigned char, sizeof(T)> serialize(const T& object)
@@ -30,7 +35,7 @@ array<unsigned char, sizeof(T)> serialize(const T& object)
     return bytes;
 }
 
-// 从二进制数组恢复对象
+// 从array恢复对象
 template <typename T>
 void deserialize(const array<unsigned char, sizeof(T)>& bytes, T& object)
 {

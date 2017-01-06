@@ -1,5 +1,5 @@
 all: CXXFLAGS += -std=c++0x -O3 -frename-registers -Wall
-all: main.exe space2.exe
+all: main.exe
 
 allopt: CXXFLAGS += -std=c++0x -Ofast -fassociative-math -flto -fno-signed-zeros -fno-trapping-math -freciprocal-math -frename-registers -march=native -Wall
 allopt: main.exe
