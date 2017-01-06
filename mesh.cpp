@@ -65,33 +65,33 @@ class Mesh
         return res;
     }
 
-    // 将mesh转换为单行字符串，与Mathematica的list格式兼容
-    string serializeList()
+    // 将mesh转换为json字符串
+    string toJson()
     {
         stringstream ss;
-        ss << "{";
-        ss << "{";
+        ss << "[";
+        ss << "[";
         ss << setprecision(3) << mesh[0][0];
         for (int j = 1; j < MAX_MESH; ++j)
             ss << "," << setprecision(3) << mesh[0][j];
-        ss << "}";
+        ss << "]";
         for (int i = 0; i < MAX_MESH; ++i)
         {
-            ss << ",{";
+            ss << ",[";
             ss << setprecision(3) << mesh[i][0];
             for (int j = 1; j < MAX_MESH; ++j)
                 ss << "," << setprecision(3) << mesh[i][j];
-            ss << "}";
+            ss << "]";
         }
-        ss << "}";
+        ss << "]";
 
-        string res = "";
+        string res;
         ss >> res;
         return res;
     }
 
     // 将mesh转换为多行字符串，用空格和换行符分隔，列宽固定
-    string serializeTable()
+    string toTable()
     {
         stringstream ss;
         for (int i = 0; i < MAX_MESH; ++i)
@@ -102,7 +102,7 @@ class Mesh
         }
         ss << endl;
 
-        string res = "";
+        string res;
         ss >> res;
         return res;
     }

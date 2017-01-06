@@ -2,7 +2,7 @@
 
 using namespace std;
 
-const int MAX_MAIN_LOOP = 10;
+const int MAX_MAIN_LOOP = 100;
 
 int main()
 {
@@ -21,7 +21,7 @@ int main()
     // 主循环
     for (int mainLoopCount = 0; mainLoopCount < MAX_MAIN_LOOP; ++mainLoopCount)
     {
-        cout << "round " << mainLoopCount << " " << civilMuseum.size() << endl
+        cout << "round " << mainLoopCount << " museum " << civilMuseum.size() << endl
              << endl;
         for (auto& i : civils) i.action();
         cout << endl;

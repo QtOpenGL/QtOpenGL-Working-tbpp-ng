@@ -1,5 +1,5 @@
-// �����
-// ֧��O(1)�Ĳ�����ɾ����O(n)���������
+// 对象池
+// 支持O(1)的插入，O(1)的删除任意元素，O(n)的无序遍历，O(n)的存储空间
 
 #ifndef POOL_CPP
 #define POOL_CPP
@@ -12,7 +12,7 @@ class Pool
     size_t _size;
 
    public:
-    Pool()��_size(0)
+    Pool()：_size(0)
     {
     }
 
