@@ -7,7 +7,7 @@ using namespace std;
 
 // const double RS_CONST = 1.484942765e-27;
 const double RS_CONST = 1.0;
-const int MAX_BISEC = 10;
+const int MAX_BISEC_ITER = 10;
 const double BISEC_RANGE = 1.0e-6;
 
 struct Point
@@ -39,7 +39,7 @@ double solve(double m, double rg, double rs, double r0)
     double r1, r2, rMid, rNew;
     r1 = 0.0;
     r2 = r0;
-    for (int i = 0; i < MAX_BISEC; ++i)
+    for (int i = 0; i < MAX_BISEC_ITER; ++i)
     {
         rMid = (r1 + r2) * 0.5;
         rNew = f(m, rg, rs, rMid);

@@ -15,6 +15,7 @@ int main()
     planets[0].y = 50.0;
     planets[0].mass = 100.0;
     space.calcCurv();
+    space.calcPlanetDis();
 
     // 初始化文明
     for (int i = 0; i < MAX_PLANET; ++i)

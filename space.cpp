@@ -11,9 +11,9 @@
 using namespace std;
 
 const int MAX_PLANET = 100;
-const double G_CONST = 0.1;   // 引力强度
-const double RG_CONST = 1.2;  // 与黑洞形状有关，必须大于9/8
-const int MAX_ITER = 10;
+const double G_CONST = 0.1;  // 引力强度
+const double RG_CONST = 1.2;  // 描述星球密度，影响黑洞形状，必须大于9/8
+const int MAX_CURV_ITER = 10;
 const double MIN_LOSS = 1.0e-7;
 const double MIN_DIS_SEG_LEN = 1.0;
 
@@ -45,12 +45,13 @@ vector<Planet> planets;
 class Space
 {
    public:
+    int clock;
     // 度规张量
     Mesh<double> curvxx, curvxy, curvyy, curvtt;
     // curv..2为更新度规张量时的临时变量
     Mesh<double> curvxx2, curvxy2, curvyy2, curvtt2;
-
-    int clock;
+    // 星球距离的缓存
+    double planetDis[MAX_PLANET][MAX_PLANET];
 
     Space() : clock(0)
     {
@@ -89,6 +90,12 @@ class Space
                     sqr(curvxy(px, py, true) * ex + curvyy(px, py, true) * ey));
         }
         return res;
+    }
+
+    // 两个星球间的距离
+    double getDis(int p1, int p2)
+    {
+        return planetDis[p1][p2];
     }
 
     void updateCurv()
@@ -190,7 +197,7 @@ class Space
             curvtt(i, j) = 1.0;
         }
 
-        for (int iterCount = 0; iterCount < MAX_ITER; ++iterCount)
+        for (int iterCount = 0; iterCount < MAX_CURV_ITER; ++iterCount)
         {
             updateCurv();
 
@@ -208,6 +215,19 @@ class Space
             curvtt = curvtt2;
             if (loss < MIN_LOSS) break;
         }
+    }
+
+    void calcPlanetDis()
+    {
+        for (size_t i = 0; i < planets.size(); ++i)
+            for (size_t j = i; j < planets.size(); ++j)
+            {
+                if (i == j)
+                    planetDis[i][j] = 0.0;
+                else
+                    planetDis[i][j] = getDis(planets[i].x, planets[i].y,
+                                             planets[j].x, planets[j].y);
+            }
     }
 };
 
