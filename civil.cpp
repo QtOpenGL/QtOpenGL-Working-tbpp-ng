@@ -37,24 +37,14 @@ class AiDouble
         return n;
     }
 
-    operator+(double d)
+    AiDouble operator*(double d)
     {
-        return n + d;
+        return AiDouble(n * d);
     }
 
-    operator-(double d)
+    AiDouble operator+=(double d)
     {
-        return n - d;
-    }
-
-    operator*(double d)
-    {
-        return n * d;
-    }
-
-    operator+=(double d)
-    {
-        return n += d;
+        return AiDouble(n += d);
     }
 };
 
@@ -128,8 +118,8 @@ int Civil::civilCount = 0;
 
 void Civil::initCivils()
 {
-    for (int i = 0; i < civils.size(); ++i)
-        for (int j = 0; j < civils.size(); ++j) civils[i].friendship[j] = 0;
+    for (size_t i = 0; i < civils.size(); ++i)
+        for (size_t j = 0; j < civils.size(); ++j) civils[i].friendship[j] = 0;
 }
 
 Civil* Civil::getByCivilId(int civilId)
@@ -169,7 +159,7 @@ void Civil::debugPrint()
          << space.clock - birthTime << endl;
     cout << tech << " " << timeScale << endl;
     cout << rateDev << " " << rateAtk << " " << rateCoop << endl;
-    for (int i = 0; i < civils.size(); ++i) cout << friendship[i] << " ";
+    for (size_t i = 0; i < civils.size(); ++i) cout << friendship[i] << " ";
     cout << endl;
     for (auto i : aiMap) cout << i.first << " " << i.second << endl;
     cout << endl;
@@ -182,7 +172,7 @@ double Civil::aiMix(int mainKey, initializer_list<double> list)
 {
     int key = mainKey << 16;
     double res = aiMap[key];
-    for (int i = 0; i < list.size(); ++i)
+    for (size_t i = 0; i < list.size(); ++i)
     {
         key = mainKey << 16 & 1 << 8 & i;
         res += aiMap[key] * (*(list.begin() + i));
@@ -284,7 +274,7 @@ void Civil::attack(Civil& target)
             copyData(aiMap);
 #undef copyData
 
-            for (int i = 0; i < civils.size(); ++i)
+            for (size_t i = 0; i < civils.size(); ++i)
             {
                 target.friendship[i] = friendship[i];
                 civils[i].friendship[target.id] = civils[i].friendship[id];
@@ -316,7 +306,7 @@ void Civil::attack(Civil& target)
             target.rateAtk = newRandom.get();
             target.rateCoop = newRandom.get();
             target.rateDev = newRandom.get();
-            for (int i = 0; i < civils.size(); ++i)
+            for (size_t i = 0; i < civils.size(); ++i)
             {
                 target.friendship[i] = 0.0;
                 civils[i].friendship[target.id] = 0.0;
@@ -367,9 +357,9 @@ void Civil::action()
     {
         // 找一个目标攻击
         // 没有找到合适的目标就什么都不做
-        for (int i = 0; i < civils.size(); ++i)
+        for (size_t i = 0; i < civils.size(); ++i)
         {
-            if (i == id) continue;
+            if (i == size_t(id)) continue;
             if (civils[i].ruinMark) continue;
             if (newRandom.get() < invSize &&
                 exp(rateAtk) * (-friendship[i] + 1.0) > 1.0)
@@ -384,9 +374,9 @@ void Civil::action()
     {
         // 找一个目标合作
         // 没有找到合适的目标就什么都不做
-        for (int i = 0; i < civils.size(); ++i)
+        for (size_t i = 0; i < civils.size(); ++i)
         {
-            if (i == id) continue;
+            if (i == size_t(id)) continue;
             if (civils[i].ruinMark) continue;
             if (newRandom.get() < invSize &&
                 exp(rateCoop) * (friendship[i] + 1.0) > 1.0)
