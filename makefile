@@ -7,5 +7,8 @@ allopt: main.exe
 debug: CXXFLAGS += -std=c++0x -Ddebug -Og -Wall
 debug: main.exe
 
-%.exe: %.cpp
+main.exe: main.cpp utils.o space.o civil.o
 	$(CXX) $^ -o $@ $(CXXFLAGS)
+
+%.o: %.cpp
+	$(CXX) -c $^ -o $@ $(CXXFLAGS)

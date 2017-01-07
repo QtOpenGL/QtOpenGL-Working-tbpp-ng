@@ -1,4 +1,4 @@
-#include "civil.cpp"
+#include "civil.h"
 
 using namespace std;
 

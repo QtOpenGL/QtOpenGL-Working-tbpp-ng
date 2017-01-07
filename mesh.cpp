@@ -50,8 +50,8 @@ class Mesh
                    jDecimal;
     }
 
-    // 取实数位置的值，只读，flag为重载标记
-    T operator()(double i, double j, bool flag)
+    // 取实数位置的值，只读
+    T operator()(double i, double j)
     {
         return interpolar(i, j);
     }
