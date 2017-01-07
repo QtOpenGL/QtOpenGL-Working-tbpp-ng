@@ -28,13 +28,17 @@ int main()
     {
         cout << "round " << mainLoopCount << " civils " << civils.size() << endl
              << endl;
+
         // 文明执行动作时不改变星球数量，会改变文明和舰队数量
         // 舰队执行动作时不改变舰队数量，需要删除的舰队标记为deleteLater
         // 因此可以放在for循环里
         cout << "civils action" << endl;
-        for (auto i : planets) civils[i.civilId].action();
+        for (size_t i = 0; i < planets.size(); ++i)
+            civils[planets[i].civilId].action();
+
         cout << "fleets action" << endl;
-        for (auto i : fleets) i.action();
+        for (auto i = fleets.begin(); i != fleets.end(); ++i) i->action();
+
         // 删除需要删除的舰队
         auto i = fleets.begin();
         while (i != fleets.end())
@@ -44,10 +48,14 @@ int main()
             else
                 ++i;
         }
+
         cout << "civils print" << endl;
-        for (auto i : planets) civils[i.civilId].debugPrint();
+        for (size_t i = 0; i < planets.size(); ++i)
+            civils[planets[i].civilId].debugPrint();
+
         cout << "fleets print" << endl;
-        for (auto i : fleets) i.debugPrint();
+        for (auto i = fleets.begin(); i != fleets.end(); ++i) i->debugPrint();
+
         cout << endl;
         ++space.clock;
     }

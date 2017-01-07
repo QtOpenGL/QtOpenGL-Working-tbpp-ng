@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const int MAX_PLANET = 100;
+const int MAX_PLANET = 1000;
 const double G_CONST = 0.1;  // 引力强度
 const double RG_CONST = 1.2;  // 描述星球密度，影响黑洞形状，必须大于9/8
 const int MAX_CURV_ITER = 10;
@@ -25,6 +25,9 @@ class Planet : public Point
     // 一个星球可能先后有多个文明，一个文明只对应一个星球
     int planetId, civilId;
     double mass;
+    // 根据星球质量确定半径，用于可视化
+    // 0~100左右的质量对应0.01~0.1左右的半径
+    float radius;
 
     bool ruinMark;    // 是否为废墟
     double lastTech;  // 上个文明的科技
@@ -34,6 +37,7 @@ class Planet : public Point
           planetId(_planetId),
           civilId(_civilId),
           mass(_mass),
+          radius(log(log(_mass + 1.0) + 1.0) * 0.02 + 0.002),
           ruinMark(false),
           lastTech(0.0)
     {
@@ -106,7 +110,8 @@ class Space
             curvtt2(i, j) = 1.0;
         }
 
-        for (size_t k = 0; k < planets.size(); ++k)
+        //        for (size_t k = 0; k < planets.size(); ++k)
+        for (size_t k = 0; k < 1; ++k)
         {
             const Planet& p = planets[k];
 
@@ -223,8 +228,8 @@ class Space
                 if (i == j)
                     planetDis[i][j] = 0.0;
                 else
-                    planetDis[i][j] = getDis(planets[i].x, planets[i].y,
-                                             planets[j].x, planets[j].y);
+                    planetDis[i][j] = planetDis[j][i] = getDis(
+                        planets[i].x, planets[i].y, planets[j].x, planets[j].y);
             }
     }
 };

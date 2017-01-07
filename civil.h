@@ -11,6 +11,9 @@
 
 using namespace std;
 
+const bool PRINT_ACTION = false;  // 是否在文明执行动作时输出内容
+const bool PRINT_FULL = false;    // 是否输出详细内容
+
 const double MAX_INIT_TECH = 3.0;
 const double TECH_LIMIT = 100.0;
 const double TECH_STEP = 10.0;       // 两次技术爆炸之间的科技
@@ -18,8 +21,6 @@ const double TECH_BOOM_RANGE = 1.0;  // 判定技术爆炸时的误差范围
 const double CHILD_CIVIL_FRIENDSHIP = 100.0;
 const double RUIN_TECH_REDUCE = 1.0;  // 废墟造成的技术爆炸随时间减少的速度
 const double MAX_AI_MIX = 1.0e10;
-const bool PRINT_ACTION = true;  // 是否在文明执行动作时输出内容，用于调试
-const bool PRINT_FULL = false;  // 是否输出详细内容
 
 // 包装double，使其初始化为一个0.1数量级的随机数
 class AiDouble
@@ -53,9 +54,8 @@ class AiDouble
 
 enum ActType
 {
-    ACT_DEV,
     ACT_ATK,
-    ATK_COOP
+    ACT_COOP
 };
 
 class Fleet
@@ -79,16 +79,12 @@ class Fleet
     {
     }
 
-    void debugPrint()
-    {
-        cout << fromCivilId << " " << targetPlanetId << " " << initTime << " "
-             << actType << " " << initDis << " " << remainDis << " " << initTech
-             << endl;
-    }
+    void debugPrint();
 
-    void action()
-    {
-    }
+    void attack();
+    void cooperate();
+
+    void action();
 };
 
 // 舰队需要经常从中间删除，因此使用list，而不是vector
@@ -121,6 +117,7 @@ class Civil
     double rateDev, rateAtk, rateCoop;
     map<int, AiDouble> aiMap;  // 存储在各种情境下修改rate...用的参数
 
+    bool exiFleet[MAX_PLANET];
     Civil(int _planetId, int _civilId);
 
     void debugPrint();
@@ -129,13 +126,8 @@ class Civil
     // 将rate...的绝对值归一化，否则会越来越大
     void normalizeRate();
 
-    // 以下是与模拟规则有关的函数
-    // 发展，探测，攻击，合作
-    // 目标为星球
     void develop();
     void detect(Planet& targetPlanet);
-    void attack(Planet& targetPlanet);
-    void cooperate(Planet& targetPlanet);
 
     // 以下是与策略有关的函数
     void action();

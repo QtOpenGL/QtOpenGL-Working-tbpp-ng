@@ -1,4 +1,4 @@
-// ÎÄÃ÷Ä£¿é by hrg
+// æ–‡æ˜æ¨¡å— by hrg
 
 #include "civil.h"
 
@@ -10,13 +10,130 @@ vector<Civil> civils;
 
 double Civil::friendship[MAX_PLANET][MAX_PLANET];
 
+void Fleet::debugPrint()
+{
+    cout << fromCivilId << " " << targetPlanetId << " " << initTime << " "
+         << actType << " " << initDis << " " << remainDis << " " << initTech
+         << endl;
+}
+
+void Fleet::attack()
+{
+    Planet& targetPlanet = planets[targetPlanetId];
+    Civil& target = civils[targetPlanet.civilId];
+
+// ä¿®æ”¹å¯¹æ–¹çš„rate...å’Œå¥½æ„Ÿåº¦
+#define tempMacro(a)                                                \
+    a += civils[fromCivilId].aiMix(                                 \
+        __LINE__, {target.rateDev, target.rateAtk, target.rateCoop, \
+                   target.tech / civils[fromCivilId].tech,          \
+                   target.timeScale / civils[fromCivilId].timeScale})
+    tempMacro(target.rateDev);
+    tempMacro(target.rateAtk);
+    tempMacro(target.rateCoop);
+    tempMacro(Civil::friendship[targetPlanetId][civils[fromCivilId].planetId]);
+#undef tempMacro
+
+    // åˆ¤å®šæ˜¯å¦æ”»å‡»æˆåŠŸ
+    double atkChance = newRandom.get();
+    if (1.0 - exp(-initTech / target.tech) > atkChance)
+    {
+        target.deathTime = space.clock;
+
+        // åˆ¤å®šæ®–æ°‘æˆ–æˆä¸ºåºŸå¢Ÿ
+        double desChance = newRandom.get();
+        if (exp(-initTech / target.tech) < desChance)
+        {
+            // æ®–æ°‘
+            if (PRINT_ACTION)
+                cout << fromCivilId << " colonize " << target.civilId << endl;
+            civils.push_back(Civil(targetPlanetId, civils.size()));
+            // push_backä¹‹ååŸæ¥çš„æ–‡æ˜åœ¨å†…å­˜ä¸­çš„ä½ç½®å¯èƒ½å‘ç”Ÿå˜åŒ–ï¼Œéœ€è¦é‡æ–°å¼•ç”¨
+            Civil& oldCivil = civils[fromCivilId];
+            Civil& newCivil = civils[civils.size() - 1];
+            targetPlanet.civilId = newCivil.civilId;
+            // å¤åˆ¶å‚æ•°
+            Civil::colonize(oldCivil, newCivil);
+            // å˜å¼‚
+            newCivil.mutate();
+        }
+        else
+        {
+            // æˆä¸ºåºŸå¢Ÿ
+            if (PRINT_ACTION)
+                cout << fromCivilId << " ruin " << target.civilId << endl;
+            targetPlanet.ruinMark = true;
+            targetPlanet.lastTech = target.tech;
+
+            // äº§ç”Ÿéšæœºåˆå§‹åŒ–çš„æ–°æ–‡æ˜
+            civils.push_back(Civil(targetPlanetId, civils.size()));
+            Civil& newCivil = civils[civils.size() - 1];
+            targetPlanet.civilId = newCivil.civilId;
+
+            // é‡ç½®å¥½æ„Ÿåº¦
+            for (size_t i = 0; i < planets.size(); ++i)
+            {
+                Civil::friendship[targetPlanetId][i] = 0.0;
+                Civil::friendship[i][targetPlanetId] = 0.0;
+            }
+        }
+    }
+}
+
+void Fleet::cooperate()
+{
+    Civil& target = civils[planets[targetPlanetId].civilId];
+
+// ä¿®æ”¹å¯¹æ–¹çš„rate...å’Œå¥½æ„Ÿåº¦
+#define tempMacro(a)                                                \
+    a += civils[fromCivilId].aiMix(                                 \
+        __LINE__, {target.rateDev, target.rateAtk, target.rateCoop, \
+                   target.tech / civils[fromCivilId].tech,          \
+                   target.timeScale / civils[fromCivilId].timeScale})
+    tempMacro(target.rateDev);
+    tempMacro(target.rateAtk);
+    tempMacro(target.rateCoop);
+    tempMacro(Civil::friendship[targetPlanetId][civils[fromCivilId].planetId]);
+#undef tempMacro
+
+    // åŒæ–¹ç§‘æŠ€å¢åŠ 
+    double t = initTech / target.tech;
+    civils[fromCivilId].tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
+    t = 1.0 / t;
+    target.tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
+}
+
+void Fleet::action()
+{
+    remainDis -= 1.0;
+    if (remainDis <= 0.0)
+    {
+        switch (actType)
+        {
+            case ACT_ATK:
+                if (PRINT_ACTION)
+                    cout << fromCivilId << " attack " << targetPlanetId << endl;
+                attack();
+                break;
+            case ACT_COOP:
+                if (PRINT_ACTION)
+                    cout << fromCivilId << " cooperate " << targetPlanetId
+                         << endl;
+                cooperate();
+                break;
+        }
+        deleteLater = true;
+        civils[fromCivilId].exiFleet[targetPlanetId] = false;
+    }
+}
+
 void Civil::initFriendship()
 {
     for (size_t i = 0; i < planets.size(); ++i)
         for (size_t j = 0; j < planets.size(); ++j) friendship[i][j] = 0.0;
 }
 
-// Ëæ»ú³õÊ¼»¯
+// éšæœºåˆå§‹åŒ–
 Civil::Civil(int _planetId, int _civilId)
     : planetId(_planetId),
       civilId(_civilId),
@@ -30,6 +147,7 @@ Civil::Civil(int _planetId, int _civilId)
       rateAtk(newRandom.get()),
       rateCoop(newRandom.get())
 {
+    for (size_t i = 0; i < planets.size(); ++i) exiFleet[i] = false;
 }
 
 void Civil::debugPrint()
@@ -64,7 +182,7 @@ double Civil::aiMix(int mainKey, initializer_list<double> list)
         key = mainKey << 16 & 1 << 8 & i;
         res += aiMap[key] * (*(list.begin() + i));
     }
-    // ·ÀÖ¹ÊıÖµ¹ı´ó
+    // é˜²æ­¢æ•°å€¼è¿‡å¤§
     if (res > MAX_AI_MIX) res = 0.0;
     return res;
 }
@@ -80,7 +198,7 @@ void Civil::normalizeRate()
 void Civil::develop()
 {
     if (PRINT_ACTION) cout << civilId << " develop" << endl;
-    // ¿Æ¼¼ÀÛ»ıµ½Ò»¶¨³Ì¶ÈÊ±´¥·¢¼¼Êõ±¬Õ¨
+    // ç§‘æŠ€ç´¯ç§¯åˆ°ä¸€å®šç¨‹åº¦æ—¶è§¦å‘æŠ€æœ¯çˆ†ç‚¸
     for (int i = 1; i < TECH_LIMIT / TECH_STEP; ++i)
     {
         if (abs(tech - TECH_STEP * i) < TECH_BOOM_RANGE)
@@ -93,10 +211,10 @@ void Civil::develop()
     tech += 1.0;
 }
 
-// Ì½²âµÄ¹¦ÄÜ»¹ÒªÔÙ¿¼ÂÇ£¬ÏÈ²»ÒªĞ´µ½actionÀï
-// ²»ÓÃ·µ»ØÖµ
-// Ì½²âµ½·ÏĞæÔò¿Æ¼¼Ôö¼Ó£¬Ôö¼ÓÁ¿ÓëÉÏÒ»¸öÎÄÃ÷µÄ¿Æ¼¼³ÉÕı±È£¬ËæÊ±¼äÖ¸ÊıË¥¼õ
-// TODO£ºÌ½²âµ½·ÏĞæÊ±£¬Èô¶Ô·½¿Æ¼¼±È×Ô¼º¸ß£¬»òÕß¿Æ¼¼×ßÏò²»Í¬£¨·¢Õ¹²ßÂÔ²»Í¬£©Ôò¼¼Êõ±¬Õ¨
+// æ¢æµ‹çš„åŠŸèƒ½è¿˜è¦å†è€ƒè™‘ï¼Œå…ˆä¸è¦å†™åˆ°actioné‡Œ
+// ä¸ç”¨è¿”å›å€¼
+// æ¢æµ‹åˆ°åºŸå¢Ÿåˆ™ç§‘æŠ€å¢åŠ ï¼Œå¢åŠ é‡ä¸ä¸Šä¸€ä¸ªæ–‡æ˜çš„ç§‘æŠ€æˆæ­£æ¯”ï¼Œéšæ—¶é—´æŒ‡æ•°è¡°å‡
+// TODOï¼šæ¢æµ‹åˆ°åºŸå¢Ÿæ—¶ï¼Œè‹¥å¯¹æ–¹ç§‘æŠ€æ¯”è‡ªå·±é«˜ï¼Œæˆ–è€…ç§‘æŠ€èµ°å‘ä¸åŒï¼ˆå‘å±•ç­–ç•¥ä¸åŒï¼‰åˆ™æŠ€æœ¯çˆ†ç‚¸
 void Civil::detect(Planet& targetPlanet)
 {
     if (PRINT_ACTION)
@@ -110,83 +228,11 @@ void Civil::detect(Planet& targetPlanet)
     }
 }
 
-void Civil::attack(Planet& targetPlanet)
-{
-    Civil& target = civils[targetPlanet.civilId];
-    if (PRINT_ACTION) cout << civilId << " attack " << target.civilId << endl;
-
-// ¸ù¾İaiMapĞŞ¸Ä×Ô¼ºµÄrate...
-// ²ÎÊıÎª×Ô¼ºµÄrate...£¬Ë«·½¿Æ¼¼µÄ±ÈÖµ£¬Ê±¼äÇúÂÊµÄ±ÈÖµ
-// ÓÃĞĞºÅ±íÊ¾Çé¾³
-#define tempMacro(a)                                                      \
-    a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop, tech / target.tech, \
-                          timeScale / target.timeScale})
-    tempMacro(rateDev);
-    tempMacro(rateAtk);
-    tempMacro(rateCoop);
-#undef tempMacro
-// ĞŞ¸Ä¶Ô·½µÄrate...ºÍºÃ¸Ğ¶È
-#define tempMacro(a)                                                       \
-    a += aiMix(__LINE__, {target.rateDev, target.rateAtk, target.rateCoop, \
-                          target.tech / tech, target.timeScale / timeScale})
-    tempMacro(target.rateDev);
-    tempMacro(target.rateAtk);
-    tempMacro(target.rateCoop);
-    tempMacro(friendship[target.planetId][planetId]);
-#undef tempMacro
-
-    // ÅĞ¶¨ÊÇ·ñ¹¥»÷³É¹¦
-    double atkChance = newRandom.get();
-    if (1.0 - exp(-tech / target.tech) > atkChance)
-    {
-        target.deathTime = space.clock;
-
-        // ÅĞ¶¨Ö³Ãñ»ò³ÉÎª·ÏĞæ
-        double desChance = newRandom.get();
-        if (exp(-tech / target.tech) < desChance)
-        {
-            // Ö³Ãñ
-            if (PRINT_ACTION)
-                cout << civilId << " colonize " << target.civilId << endl;
-            // push_backÖ®ºóÔ­À´µÄÎÄÃ÷ÔÚÄÚ´æÖĞµÄÎ»ÖÃ¿ÉÄÜ·¢Éú±ä»¯£¬ĞèÒªÖØĞÂÒıÓÃ
-            int oldCivilId = civilId;
-            civils.push_back(Civil(target.planetId, civils.size()));
-            Civil& oldCivil = civils[oldCivilId];
-            Civil& newCivil = civils[civils.size() - 1];
-            targetPlanet.civilId = newCivil.civilId;
-            // ¸´ÖÆ²ÎÊı
-            colonize(oldCivil, newCivil);
-            // ±äÒì
-            newCivil.mutate();
-        }
-        else
-        {
-            // ³ÉÎª·ÏĞæ
-            if (PRINT_ACTION)
-                cout << civilId << " ruin " << target.civilId << endl;
-            targetPlanet.ruinMark = true;
-            targetPlanet.lastTech = target.tech;
-
-            // ²úÉúËæ»ú³õÊ¼»¯µÄĞÂÎÄÃ÷
-            civils.push_back(Civil(target.planetId, civils.size()));
-            Civil& newCivil = civils[civils.size() - 1];
-            targetPlanet.civilId = newCivil.civilId;
-
-            // ÖØÖÃºÃ¸Ğ¶È
-            for (size_t i = 0; i < planets.size(); ++i)
-            {
-                friendship[newCivil.planetId][i] = 0.0;
-                friendship[i][newCivil.planetId] = 0.0;
-            }
-        }
-    }
-}
-
 void Civil::colonize(Civil& oldCivil, Civil& newCivil)
 {
     ++oldCivil.childCivilCount;
 
-// ¸´ÖÆ×Ô¼ºµÄ¿Æ¼¼Óë²ßÂÔ²ÎÊı
+// å¤åˆ¶è‡ªå·±çš„ç§‘æŠ€ä¸ç­–ç•¥å‚æ•°
 #define copyData(a) newCivil.a = oldCivil.a
     copyData(tech);
     copyData(rateAtk);
@@ -195,57 +241,24 @@ void Civil::colonize(Civil& oldCivil, Civil& newCivil)
     copyData(aiMap);
 #undef copyData
 
-    // ¸´ÖÆ×Ô¼º¶ÔÆäËûĞÇÇòµÄºÃ¸Ğ¶È£¬ÆäËûĞÇÇò¶Ô×Ô¼ºµÄºÃ¸Ğ¶È
+    // å¤åˆ¶è‡ªå·±å¯¹å…¶ä»–æ˜Ÿçƒçš„å¥½æ„Ÿåº¦ï¼Œå…¶ä»–æ˜Ÿçƒå¯¹è‡ªå·±çš„å¥½æ„Ÿåº¦
     for (size_t i = 0; i < planets.size(); ++i)
     {
         friendship[newCivil.planetId][i] = friendship[oldCivil.planetId][i];
         friendship[i][newCivil.planetId] = friendship[i][oldCivil.planetId];
     }
-    // ×Ô¼ºÓë×ÓÎÄÃ÷ºÃ¸Ğ¶ÈºÜ¸ß
+    // è‡ªå·±ä¸å­æ–‡æ˜å¥½æ„Ÿåº¦å¾ˆé«˜
     friendship[oldCivil.planetId][newCivil.planetId] = CHILD_CIVIL_FRIENDSHIP;
     friendship[newCivil.planetId][oldCivil.planetId] = CHILD_CIVIL_FRIENDSHIP;
 }
 
-void Civil::cooperate(Planet& targetPlanet)
-{
-    Civil& target = civils[targetPlanet.civilId];
-    if (PRINT_ACTION)
-        cout << civilId << " cooperate " << target.civilId << endl;
-
-// ¸ù¾İaiMapĞŞ¸Ä×Ô¼ºµÄrate...
-// ²ÎÊıÎª×Ô¼ºµÄrate...£¬Ë«·½¿Æ¼¼µÄ±ÈÖµ£¬Ê±¼äÇúÂÊµÄ±ÈÖµ
-// ÓÃĞĞºÅ±íÊ¾Çé¾³
-#define tempMacro(a)                                                      \
-    a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop, tech / target.tech, \
-                          timeScale / target.timeScale})
-    tempMacro(rateDev);
-    tempMacro(rateAtk);
-    tempMacro(rateCoop);
-#undef tempMacro
-// ĞŞ¸Ä¶Ô·½µÄrate...ºÍºÃ¸Ğ¶È
-#define tempMacro(a)                                                       \
-    a += aiMix(__LINE__, {target.rateDev, target.rateAtk, target.rateCoop, \
-                          target.tech / tech, target.timeScale / timeScale})
-    tempMacro(target.rateDev);
-    tempMacro(target.rateAtk);
-    tempMacro(target.rateCoop);
-    tempMacro(friendship[target.planetId][planetId]);
-#undef tempMacro
-
-    // Ë«·½¿Æ¼¼Ôö¼Ó
-    double t = tech / target.tech;
-    tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
-    t = 1.0 / t;
-    target.tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
-}
-
-// TODO£º¼ÆËã×Ô¼º×ö¸÷¸ö¶¯×÷µÄ¸ÅÂÊ£¬È»ºóÑ¡Ò»¸ö
+// TODOï¼šè®¡ç®—è‡ªå·±åšå„ä¸ªåŠ¨ä½œçš„æ¦‚ç‡ï¼Œç„¶åé€‰ä¸€ä¸ª
 void Civil::action()
 {
-    // »ØºÏ¿ªÊ¼Ç°°Ñrate...¹éÒ»»¯
+    // å›åˆå¼€å§‹å‰æŠŠrate...å½’ä¸€åŒ–
     normalizeRate();
     double invSize = 1.0 / civils.size();
-    // Ä¿Ç°ÓĞ1/3¸ÅÂÊ·¢Õ¹£¬1/3¸ÅÂÊ¹¥»÷£¬1/3¸ÅÂÊºÏ×÷
+    // ç›®å‰æœ‰1/3æ¦‚ç‡å‘å±•ï¼Œ1/3æ¦‚ç‡æ”»å‡»ï¼Œ1/3æ¦‚ç‡åˆä½œ
     double choice = newRandom.get();
     if (choice < 0.33)
     {
@@ -253,30 +266,59 @@ void Civil::action()
     }
     else if (choice < 0.67)
     {
-        // ÕÒÒ»¸öÄ¿±ê¹¥»÷
-        // Ã»ÓĞÕÒµ½ºÏÊÊµÄÄ¿±ê¾ÍÊ²Ã´¶¼²»×ö
+        // æ‰¾ä¸€ä¸ªç›®æ ‡æ”»å‡»
+        // æ²¡æœ‰æ‰¾åˆ°åˆé€‚çš„ç›®æ ‡å°±ä»€ä¹ˆéƒ½ä¸åš
         for (size_t i = 0; i < planets.size(); ++i)
         {
             if (i == size_t(planetId)) continue;
+            if (exiFleet[i]) continue;
+
             if (newRandom.get() < invSize &&
                 exp(rateAtk) * (-friendship[planetId][i] + 1.0) > 1.0)
             {
-                attack(planets[i]);
+// æ ¹æ®aiMapä¿®æ”¹è‡ªå·±çš„rate...
+// å‚æ•°ä¸ºè‡ªå·±çš„rate...ï¼ŒåŒæ–¹ç§‘æŠ€çš„æ¯”å€¼ï¼Œæ—¶é—´æ›²ç‡çš„æ¯”å€¼
+// ç”¨è¡Œå·è¡¨ç¤ºæƒ…å¢ƒ
+#define tempMacro(a)                                              \
+    a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop,             \
+                          tech / civils[planets[i].civilId].tech, \
+                          timeScale / civils[planets[i].civilId].timeScale})
+                tempMacro(rateDev);
+                tempMacro(rateAtk);
+                tempMacro(rateCoop);
+#undef tempMacro
+                fleets.push_back(
+                    Fleet(civilId, planets[i].planetId, ACT_ATK,
+                          space.getDis(planetId, planets[i].planetId), tech));
+                exiFleet[planets[i].planetId] = true;
                 break;
             }
         }
     }
     else
     {
-        // ÕÒÒ»¸öÄ¿±êºÏ×÷
-        // Ã»ÓĞÕÒµ½ºÏÊÊµÄÄ¿±ê¾ÍÊ²Ã´¶¼²»×ö
+        // æ‰¾ä¸€ä¸ªç›®æ ‡åˆä½œ
+        // æ²¡æœ‰æ‰¾åˆ°åˆé€‚çš„ç›®æ ‡å°±ä»€ä¹ˆéƒ½ä¸åš
         for (size_t i = 0; i < planets.size(); ++i)
         {
             if (i == size_t(planetId)) continue;
+            if (exiFleet[i]) continue;
+
             if (newRandom.get() < invSize &&
                 exp(rateCoop) * (friendship[planetId][i] + 1.0) > 1.0)
             {
-                cooperate(planets[i]);
+#define tempMacro(a)                                              \
+    a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop,             \
+                          tech / civils[planets[i].civilId].tech, \
+                          timeScale / civils[planets[i].civilId].timeScale})
+                tempMacro(rateDev);
+                tempMacro(rateAtk);
+                tempMacro(rateCoop);
+#undef tempMacro
+                fleets.push_back(
+                    Fleet(civilId, planets[i].planetId, ACT_COOP,
+                          space.getDis(planetId, planets[i].planetId), tech));
+                exiFleet[planets[i].planetId] = true;
                 break;
             }
         }
@@ -288,8 +330,8 @@ void Civil::mutate()
     const int MAX_PARENT = 5;
     const double STEP_WEIGHT_REDUCE = 0.5;
 
-    // ½«¸÷´úÄ¸ÎÄÃ÷´æÈëparentList£¬²»°üÀ¨×Ô¼º
-    // ´ïµ½MAX_PARENT»òÃ»ÓĞÄ¸ÎÄÃ÷Ê±½áÊø
+    // å°†å„ä»£æ¯æ–‡æ˜å­˜å…¥parentListï¼Œä¸åŒ…æ‹¬è‡ªå·±
+    // è¾¾åˆ°MAX_PARENTæˆ–æ²¡æœ‰æ¯æ–‡æ˜æ—¶ç»“æŸ
     int parentIdList[MAX_PARENT];
     int parentCount = 0;
     int nowCivilId = civilId;
@@ -303,9 +345,9 @@ void Civil::mutate()
 
     for (auto stgPara : aiMap)
     {
-        // stepCumuÊÇ¸÷´úÄ¸ÎÄÃ÷µÄ²ßÂÔ²ÎÊı±ä»¯Á¿£¬°´Ö¸ÊıË¥¼õ¼ÓÈ¨Æ½¾ùµÄ½á¹û
-        // Ö®Ç°µÄ±äÒìÍù²ßÂÔ²ÎÊı½ÏºÃµÄ·½Ïò½øĞĞ£¬ËùÒÔÖ®ºóµÄ±äÒìÒ²ÒªÍùÕâ¸ö·½Ïò½øĞĞ£¬
-        // Í¬Ê±ÒªÓĞÒ»¶¨Ëæ»úĞÔ
+        // stepCumuæ˜¯å„ä»£æ¯æ–‡æ˜çš„ç­–ç•¥å‚æ•°å˜åŒ–é‡ï¼ŒæŒ‰æŒ‡æ•°è¡°å‡åŠ æƒå¹³å‡çš„ç»“æœ
+        // ä¹‹å‰çš„å˜å¼‚å¾€ç­–ç•¥å‚æ•°è¾ƒå¥½çš„æ–¹å‘è¿›è¡Œï¼Œæ‰€ä»¥ä¹‹åçš„å˜å¼‚ä¹Ÿè¦å¾€è¿™ä¸ªæ–¹å‘è¿›è¡Œï¼Œ
+        // åŒæ—¶è¦æœ‰ä¸€å®šéšæœºæ€§
         double stepCumu = 1.0;
         for (int i = 0; i < parentCount - 1; ++i)
         {
@@ -313,7 +355,7 @@ void Civil::mutate()
                        civils[parentIdList[i]].aiMap[stgPara.first] -
                        civils[parentIdList[i + 1]].aiMap[stgPara.first];
         }
-        // ĞŞ¸Ä²ßÂÔ²ÎÊı£¬±ä»¯Á¿µÄÊıÁ¿¼¶ÓëstepCumuÏàÍ¬£¬·½ÏòÒ²Æ«ÏòstepCumu
+        // ä¿®æ”¹ç­–ç•¥å‚æ•°ï¼Œå˜åŒ–é‡çš„æ•°é‡çº§ä¸stepCumuç›¸åŒï¼Œæ–¹å‘ä¹Ÿåå‘stepCumu
         aiMap[stgPara.first] += (newRandom.getNormal() + 0.33) * stepCumu;
     }
 }
