@@ -5,8 +5,9 @@
 
 Backend *backend;
 
+// 初始暂停运算，用户手动开始
 Backend::Backend()
-    : paused(false), lock(false), lastClock(0), lastFpsTime(0), fps(0.0)
+    : paused(true), locked(false), lastClock(0), lastFpsTime(0), fps(0.0)
 {
 }
 
@@ -31,6 +32,21 @@ void Backend::init()
     emit msg("后端初始化完成");
 }
 
+void Backend::lock()
+{
+    while (locked)
+    {
+        emit msg("等待后端响应...");
+        QThread::msleep(1);
+    }
+    locked = true;
+}
+
+void Backend::unlock()
+{
+    locked = false;
+}
+
 void Backend::work()
 {
     while (true)
@@ -38,7 +54,7 @@ void Backend::work()
         // TODO：将这句注释掉则全速运行
         //        QThread::msleep(100);
 
-        if (paused || lock)
+        if (paused || locked)
         {
             QThread::msleep(1);
             continue;

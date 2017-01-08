@@ -1,7 +1,5 @@
 #include "civil.h"
 
-using namespace std;
-
 const int MAX_MAIN_LOOP = 100;
 
 int main()

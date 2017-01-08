@@ -15,7 +15,7 @@ class Backend : public QObject
    public:
     // paused用于用户暂停
     // lock用于线程保护
-    bool paused, lock;
+    bool paused, locked;
 
     int lastClock, lastFpsTime;
     float fps;
@@ -23,6 +23,8 @@ class Backend : public QObject
     Backend();
 
     void init();
+    void lock();
+    void unlock();
 
    public slots:
     void work();

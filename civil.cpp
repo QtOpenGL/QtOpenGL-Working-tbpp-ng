@@ -2,8 +2,6 @@
 
 #include "civil.h"
 
-using namespace std;
-
 list<Fleet> fleets;
 
 vector<Civil> civils;

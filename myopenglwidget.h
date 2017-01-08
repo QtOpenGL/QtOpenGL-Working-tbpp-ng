@@ -14,6 +14,8 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
    public:
     bool paused;
     float xPos, yPos, zPos, xSpd, ySpd, zSpd;
+    QPoint lastMousePoint;
+    bool mouseInLeftEdge, mouseInRightEdge, mouseInTopEdge, mouseInBottomEdge;
 
     int frameCount, lastFpsTime;
     float fps;
@@ -42,7 +44,7 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     void drawCircle(float x, float y, float r, float colorR, float colorG,
                     float colorB);
     void keyPressEvent(QKeyEvent *event);
-    void keyReleaseEvent(QKeyEvent *event);
+    //    void keyReleaseEvent(QKeyEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void wheelEvent(QWheelEvent *event);
 

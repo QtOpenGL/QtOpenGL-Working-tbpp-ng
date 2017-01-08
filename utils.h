@@ -13,10 +13,6 @@ using namespace std;
 
 #define sqr(x) ((x) * (x))
 
-// fout用于输出大量带格式的数据，然后用其他程序分析
-// 少量且实时的调试数据输出到cout
-extern ofstream fout;
-
 // 将任何对象在内存中的数据转换为array
 // 注意：不包括对象内的指针指向的内容！
 template <typename T>

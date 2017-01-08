@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const int MAX_PLANET = 1000;
+const int MAX_PLANET = 100;
 const double G_CONST = 0.1;  // 引力强度
 const double RG_CONST = 1.2;  // 描述星球密度，影响黑洞形状，必须大于9/8
 const int MAX_CURV_ITER = 10;

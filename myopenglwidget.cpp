@@ -1,5 +1,4 @@
 #include "myopenglwidget.h"
-#include <math.h>
 #include <QDebug>
 #include <QKeyEvent>
 #include <QThread>
@@ -13,7 +12,7 @@ const float PLANET_Z = 2.0;  // 星球的z坐标
 
 const int MAX_BLUR_ITER = 4;
 
-const float MOVE_SPD = 0.01;
+const float MOVE_SPD_KEY = 0.01;
 const float MOVE_DUMP = 0.8;
 
 const float EDGE_X = 2.0;
@@ -22,8 +21,10 @@ const float EDGE_Z_NEAR = PLANET_Z - 0.1;
 const float EDGE_Z_FAR = -3.0;
 const float EDGE_ELAS = -0.5;
 
-const float MOVE_SPD_MOUSE = 0.02;
-const int EDGE_MOUSE = 200;
+const float MOVE_SPD_MOUSE_Z = 0.002;
+const float MOVE_SPD_MOUSE_EDGE = 0.05;
+const int EDGE_MOUSE_RANGE = 200;
+const float MOVE_SPD_WHEEL = 0.1;
 
 // 初始暂停绘制，后端初始化完毕后才能开始绘制
 MyOpenGLWidget::MyOpenGLWidget(QWidget *parent)
@@ -35,10 +36,15 @@ MyOpenGLWidget::MyOpenGLWidget(QWidget *parent)
       xSpd(0.0),
       ySpd(0.0),
       zSpd(0.0),
+      mouseInLeftEdge(false),
+      mouseInRightEdge(false),
+      mouseInTopEdge(false),
+      mouseInBottomEdge(false),
       frameCount(0),
       lastFpsTime(0),
       fps(0.0)
 {
+    // lastMousePoint用默认初始化
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
 }
@@ -182,12 +188,7 @@ void MyOpenGLWidget::paintGL()
     shader.bind();
     vertexArray.bind();
 
-    while (backend->lock)
-    {
-        emit msg("等待后端响应...");
-        QThread::msleep(1);
-    }
-    backend->lock = true;
+    backend->lock();
 
     for (int i = 0; i < MAX_PLANET; ++i)
     {
@@ -213,7 +214,7 @@ void MyOpenGLWidget::paintGL()
         drawCircle(scrx, scry, r, colorR, colorG, colorB);
     }
 
-    backend->lock = false;
+    backend->unlock();
 
     vertexArray.release();
     shader.release();
@@ -314,105 +315,121 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
     glDrawArrays(GL_POLYGON, 0, segCount);
 }
 
-// z坐标离星球越近，移动速度越慢
 void MyOpenGLWidget::keyPressEvent(QKeyEvent *event)
 {
-    // qDebug() << "key" << event->key() << event->text();
     switch (event->key())
     {
+        // z坐标离星球越近，移动速度越慢
         case Qt::Key_L:
-            xSpd += MOVE_SPD * (PLANET_Z - zPos);
+            xSpd -= MOVE_SPD_KEY * (PLANET_Z - zPos);
             break;
         case Qt::Key_J:
-            xSpd -= MOVE_SPD * (PLANET_Z - zPos);
+            xSpd += MOVE_SPD_KEY * (PLANET_Z - zPos);
             break;
         case Qt::Key_I:
-            ySpd += MOVE_SPD * (PLANET_Z - zPos);
+            ySpd -= MOVE_SPD_KEY * (PLANET_Z - zPos);
             break;
         case Qt::Key_K:
-            ySpd -= MOVE_SPD * (PLANET_Z - zPos);
+            ySpd += MOVE_SPD_KEY * (PLANET_Z - zPos);
             break;
         case Qt::Key_U:
-            zSpd += MOVE_SPD * (PLANET_Z - zPos);
+            zSpd += MOVE_SPD_KEY * (PLANET_Z - zPos);
             break;
         case Qt::Key_O:
-            zSpd -= MOVE_SPD * (PLANET_Z - zPos);
+            zSpd -= MOVE_SPD_KEY * (PLANET_Z - zPos);
             break;
     }
 }
 
-void MyOpenGLWidget::keyReleaseEvent(QKeyEvent *event)
-{
-    // qDebug() << "key" << event->key() << event->text();
-    //    switch (event->key())
-    //    {
-    //        case Qt::Key_L:
-    //            xSpd = 0;
-    //            break;
-    //        case Qt::Key_J:
-    //            xSpd = 0;
-    //            break;
-    //        case Qt::Key_I:
-    //            ySpd = 0;
-    //            break;
-    //        case Qt::Key_K:
-    //            ySpd = 0;
-    //            break;
-    //        case Qt::Key_U:
-    //            zSpd = 0;
-    //            break;
-    //        case Qt::Key_O:
-    //            zSpd = 0;
-    //            break;
-    //    }
-}
+// void MyOpenGLWidget::keyReleaseEvent(QKeyEvent *event)
+//{
+//    switch (event->key())
+//    {
+//        case Qt::Key_L:
+//            xSpd = 0;
+//            break;
+//        case Qt::Key_J:
+//            xSpd = 0;
+//            break;
+//        case Qt::Key_I:
+//            ySpd = 0;
+//            break;
+//        case Qt::Key_K:
+//            ySpd = 0;
+//            break;
+//        case Qt::Key_U:
+//            zSpd = 0;
+//            break;
+//        case Qt::Key_O:
+//            zSpd = 0;
+//            break;
+//    }
+//}
 
-QPoint lastMousePoint;
 void MyOpenGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
     if (event->buttons() & Qt::RightButton)
     {
+        // 右键拖动时禁用鼠标靠近屏幕边缘的效果
+        mouseInLeftEdge = mouseInRightEdge = mouseInTopEdge =
+            mouseInBottomEdge = false;
+
         QPoint delta = event->pos() - lastMousePoint;
+        // 鼠标位置与上次记录时较近，才是连续移动
         if (delta.manhattanLength() < 10)
         {
-            zSpd -= 0.002 * delta.y() * (PLANET_Z - zPos);
-            // TODO：右键左右移动用来干什么
+            zSpd -= MOVE_SPD_MOUSE_Z * delta.y() * (PLANET_Z - zPos);
         }
         lastMousePoint = event->pos();
     }
     else
     {
-        if (event->pos().x() > width() - EDGE_MOUSE)
-            xSpd = -MOVE_SPD_MOUSE * (PLANET_Z - zPos);
-        else if (event->pos().x() < EDGE_MOUSE)
-            xSpd = MOVE_SPD_MOUSE * (PLANET_Z - zPos);
-        if (event->pos().y() > height() - EDGE_MOUSE)
-            ySpd = MOVE_SPD_MOUSE * (PLANET_Z - zPos);
-        else if (event->pos().y() < EDGE_MOUSE)
-            ySpd = -MOVE_SPD_MOUSE * (PLANET_Z - zPos);
+        if (event->pos().x() > width() - EDGE_MOUSE_RANGE)
+            mouseInLeftEdge = true;
+        else
+            mouseInLeftEdge = false;
+        if (event->pos().x() < EDGE_MOUSE_RANGE)
+            mouseInRightEdge = true;
+        else
+            mouseInRightEdge = false;
+        if (event->pos().y() > height() - EDGE_MOUSE_RANGE)
+            mouseInTopEdge = true;
+        else
+            mouseInTopEdge = false;
+        if (event->pos().y() < EDGE_MOUSE_RANGE)
+            mouseInBottomEdge = true;
+        else
+            mouseInBottomEdge = false;
     }
 }
 
 void MyOpenGLWidget::wheelEvent(QWheelEvent *event)
 {
     if (event->delta() > 0)
-    {
-        zPos += 0.1;
-    }
-    if (event->delta() < 0)
-    {
-        zPos -= 0.1;
-    }
+        zPos += MOVE_SPD_WHEEL * (PLANET_Z - zPos);
+    else if (event->delta() < 0)
+        zPos -= MOVE_SPD_WHEEL * (PLANET_Z - zPos);
 }
 
 void MyOpenGLWidget::animate()
 {
-    xPos += xSpd;
-    yPos += ySpd;
-    zPos += zSpd;
+    if (mouseInLeftEdge)
+        xSpd = -MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+    else if (mouseInRightEdge)
+        xSpd = MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+    if (mouseInTopEdge)
+        ySpd = MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+    else if (mouseInBottomEdge)
+        ySpd = -MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+
     xSpd *= MOVE_DUMP;
     ySpd *= MOVE_DUMP;
     zSpd *= MOVE_DUMP;
+
+    xPos += xSpd;
+    yPos += ySpd;
+    zPos += zSpd;
+
     if (xPos > EDGE_X)
     {
         xPos = EDGE_X;
