@@ -3,12 +3,15 @@
 #include <QKeyEvent>
 #include <QThread>
 #include <QVector4D>
+#include <cmath>
 #include "backend.h"
 #include "civil.h"
 #include "color.cpp"
 #include "globaltime.h"
+#include "utils.h"
 
-const float PLANET_Z = 2.0;  // 星球的z坐标
+const float PLANET_Z = 2.0;                // 星球的z坐标
+const float PLANET_DRAW_POS_RATIO = 0.05;  //星球坐标与绘图坐标的比例
 
 const int MAX_BLUR_ITER = 4;
 
@@ -22,7 +25,7 @@ const float EDGE_Z_FAR = -3.0;
 const float EDGE_ELAS = -0.5;
 
 const float MOVE_SPD_MOUSE_Z = 0.002;
-const float MOVE_SPD_MOUSE_EDGE = 0.05;
+const float MOVE_SPD_MOUSE_EDGE = 0.01;
 const int EDGE_MOUSE_RANGE = 200;
 const float MOVE_SPD_WHEEL = 0.1;
 
@@ -66,7 +69,7 @@ MyOpenGLWidget::~MyOpenGLWidget()
 void MyOpenGLWidget::initializeGL()
 {
     initializeOpenGLFunctions();
-    const float retinaScale = devicePixelRatio();
+    int retinaScale = devicePixelRatio();
     glViewport(0, 0, width() * retinaScale, height() * retinaScale);
     glEnable(GL_DEPTH_TEST);
 
@@ -193,8 +196,10 @@ void MyOpenGLWidget::paintGL()
     for (int i = 0; i < MAX_PLANET; ++i)
     {
         // 将星球坐标转换为绘图坐标
-        float scrx = (planets[i].x - 50.0) * 0.05;
-        float scry = (planets[i].y - 50.0) * 0.05;
+        float drawX =
+            (planets[i].x - float(MAX_MESH) * 0.5) * PLANET_DRAW_POS_RATIO;
+        float drawY =
+            (planets[i].y - float(MAX_MESH) * 0.5) * PLANET_DRAW_POS_RATIO;
         float r = planets[i].radius;
         // 根据星球发展、攻击、合作概率之比确定色相
         // 发展概率大则偏绿色
@@ -211,7 +216,7 @@ void MyOpenGLWidget::paintGL()
         float colorG = float(tColor.g) / 255.0;
         float colorB = float(tColor.b) / 255.0;
 
-        drawCircle(scrx, scry, r, colorR, colorG, colorB);
+        drawCircle(drawX, drawY, r, colorR, colorG, colorB);
     }
 
     backend->unlock();
@@ -262,15 +267,15 @@ void MyOpenGLWidget::resizeGL()
 void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
                                 float colorG, float colorB)
 {
-    // 设置绘制位置
+    // 将绘图坐标转换为屏幕坐标
     // 半径大的星球略微往下移动，防止挡住半径小的星球
     QMatrix4x4 matrix = projMat;
     matrix.translate(xPos + x, yPos + y, zPos - PLANET_Z - r);
-    // 用testVec测试星球是否在视线外，在视线外则不绘制
-    QVector4D testVec(0.0, 0.0, 0.0, 1.0);
-    testVec = matrix * testVec;
-    if (abs(testVec.x()) > testVec.w()) return;
-    if (abs(testVec.y()) > testVec.w()) return;
+
+    // 判断星球是否在视线外，在视线外则不绘制
+    QVector4D testVec = matrix * QVector4D(0.0, 0.0, 0.0, 1.0);
+    if (abs(testVec.x()) > testVec.w() * 1.2) return;
+    if (abs(testVec.y()) > testVec.w() * 1.2) return;
     shader.setUniformValue("matrix", matrix);
 
     // 根据半径和缩放调整画圆的线段数
@@ -403,6 +408,55 @@ void MyOpenGLWidget::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
+void MyOpenGLWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (event->buttons() & Qt::LeftButton)
+    {
+        // 将绘图坐标转换为屏幕坐标，获得z，w坐标
+        QMatrix4x4 matrix = projMat;
+        matrix.translate(xPos, yPos, zPos - PLANET_Z);
+        QVector4D testVec = matrix * QVector4D(0.0, 0.0, 0.0, 1.0);
+        // 将鼠标坐标转换为屏幕坐标
+        float scrX = (float(event->pos().x()) / float(width()) * 2.0 - 1.0);
+        float scrY = (1.0 - float(event->pos().y()) / float(height()) * 2.0);
+        // 将屏幕坐标转换为绘图坐标
+        matrix.setToIdentity();
+        matrix.translate(-xPos, -yPos, -zPos + PLANET_Z);
+        matrix *= projMat.inverted();
+        testVec = matrix * QVector4D(scrX * testVec.w(), scrY * testVec.w(),
+                                     testVec.z(), testVec.w());
+        // 将绘图坐标转换为星球坐标
+        float planetX =
+            testVec.x() / PLANET_DRAW_POS_RATIO + float(MAX_MESH) * 0.5;
+        float planetY =
+            testVec.y() / PLANET_DRAW_POS_RATIO + float(MAX_MESH) * 0.5;
+
+        // 遍历所有星球，选择半径最小的星球，防止被大的星球挡住
+        // 速度较慢，无法用于鼠标移动时判定
+        // TODO：减少遍历数
+        int nowPlanetId = -1;
+        float nowR = numeric_limits<float>::infinity();
+        for (auto i : planets)
+        {
+            // 星球半径太小时给一个较大的选择半径
+            float selectR = max(i.radius, 0.01f) / PLANET_DRAW_POS_RATIO;
+            if (sqr(planetX - i.x) + sqr(planetY - i.y) < sqr(selectR))
+            {
+                if (selectR < nowR)
+                {
+                    nowPlanetId = i.planetId;
+                    nowR = selectR;
+                }
+            }
+        }
+        if (nowPlanetId >= 0)
+        {
+            Planet &p = planets[nowPlanetId];
+            // TODO：选中之后的动作
+        }
+    }
+}
+
 void MyOpenGLWidget::wheelEvent(QWheelEvent *event)
 {
     if (event->delta() > 0)
@@ -414,13 +468,13 @@ void MyOpenGLWidget::wheelEvent(QWheelEvent *event)
 void MyOpenGLWidget::animate()
 {
     if (mouseInLeftEdge)
-        xSpd = -MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+        xSpd += -MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
     else if (mouseInRightEdge)
-        xSpd = MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+        xSpd += MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
     if (mouseInTopEdge)
-        ySpd = MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+        ySpd += MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
     else if (mouseInBottomEdge)
-        ySpd = -MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
+        ySpd += -MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
 
     xSpd *= MOVE_DUMP;
     ySpd *= MOVE_DUMP;

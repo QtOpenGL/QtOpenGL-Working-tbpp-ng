@@ -97,6 +97,7 @@ void Fleet::cooperate()
     // 双方科技增加
     double t = initTech / target.tech;
     civils[fromCivilId].tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
+    // civils[fromCivilId].tech += 2.67 * exp(-0.333 * t) / (t + 1.0 / t);
     t = 1.0 / t;
     target.tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
 }

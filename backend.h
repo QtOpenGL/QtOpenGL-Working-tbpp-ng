@@ -13,8 +13,7 @@ class Backend : public QObject
     Q_OBJECT
 
    public:
-    // paused用于用户暂停
-    // lock用于线程保护
+    // paused用于用户暂停，locked用于线程保护
     bool paused, locked;
 
     int lastClock, lastFpsTime;

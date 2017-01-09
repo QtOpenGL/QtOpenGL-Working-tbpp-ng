@@ -14,8 +14,10 @@ Backend::Backend()
 void Backend::init()
 {
     emit msg("后端正在初始化...");
-    planets.push_back(Planet(0, 0, Point(50.0, 50.0), 100.0));
+
     // 初始化星球
+    planets.push_back(Planet(
+        0, 0, Point(float(MAX_MESH) * 0.5, float(MAX_MESH) * 0.5), 100.0));
     for (int i = 1; i < MAX_PLANET; ++i)
         planets.push_back(Planet(planets.size(), planets.size(),
                                  newRandom.getPoint() * 100.0,
@@ -60,17 +62,15 @@ void Backend::work()
             continue;
         }
 
+        ++space.clock;
         //        cout << "clock " << space.clock << " civils " << civils.size()
         //             << " fleets " << fleets.size() << endl;
 
         // 文明执行动作时不改变星球数量，会改变文明和舰队数量
         // 舰队执行动作时不改变舰队数量，需要删除的舰队标记为deleteLater
         // 因此可以放在for循环里
-        //        cout << "civils action" << endl;
         for (size_t i = 0; i < planets.size(); ++i)
             civils[planets[i].civilId].action();
-
-        //        cout << "fleets action" << endl;
         for (auto i = fleets.begin(); i != fleets.end(); ++i) i->action();
 
         // 删除需要删除的舰队
@@ -83,7 +83,6 @@ void Backend::work()
                 ++i;
         }
 
-        ++space.clock;
         int nowFpsTime = gTime.elapsed();
         if (nowFpsTime - lastFpsTime > 100)
         {

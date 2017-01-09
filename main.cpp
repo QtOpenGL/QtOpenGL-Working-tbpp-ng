@@ -5,13 +5,12 @@ const int MAX_MAIN_LOOP = 100;
 int main()
 {
     // 初始化星球
-    for (int i = 0; i < MAX_PLANET; ++i)
+    planets.push_back(Planet(
+        0, 0, Point(float(MAX_MESH) * 0.5, float(MAX_MESH) * 0.5), 100.0));
+    for (int i = 1; i < MAX_PLANET; ++i)
         planets.push_back(Planet(planets.size(), planets.size(),
                                  newRandom.getPoint() * 100.0,
                                  newRandom.get() * 1.0));
-    planets[0].x = 50.0;
-    planets[0].y = 50.0;
-    planets[0].mass = 100.0;
     space.calcCurv();
     space.calcPlanetDis();
 
@@ -24,7 +23,9 @@ int main()
     // 主循环
     for (int mainLoopCount = 0; mainLoopCount < MAX_MAIN_LOOP; ++mainLoopCount)
     {
-        cout << "round " << mainLoopCount << " civils " << civils.size() << endl
+        ++space.clock;
+        cout << "clock " << space.clock << " civils " << civils.size()
+             << " fleets " << fleets.size() << endl
              << endl;
 
         // 文明执行动作时不改变星球数量，会改变文明和舰队数量
@@ -55,7 +56,6 @@ int main()
         for (auto i = fleets.begin(); i != fleets.end(); ++i) i->debugPrint();
 
         cout << endl;
-        ++space.clock;
     }
 
     return 0;
