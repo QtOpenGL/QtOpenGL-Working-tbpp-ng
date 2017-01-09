@@ -11,7 +11,7 @@
 #include "utils.h"
 
 const float PLANET_Z = 2.0;                // 星球的z坐标
-const float PLANET_DRAW_POS_RATIO = 0.05;  //星球坐标与绘图坐标的比例
+const float PLANET_DRAW_POS_RATIO = 0.05;  // 星球坐标与场景坐标的比例
 
 const int MAX_BLUR_ITER = 4;
 
@@ -192,32 +192,42 @@ void MyOpenGLWidget::paintGL()
     vertexArray.bind();
 
     backend->lock();
+    //    qDebug() << "test0";
 
-    for (int i = 0; i < MAX_PLANET; ++i)
+    // 确定星球颜色时以科技最高的星球为参考
+    double maxTech = 0.0;
+    for (auto i : planets) maxTech = max(maxTech, civils[i.civilId].tech);
+    //    qDebug() << "test1";
+
+    for (auto i : planets)
     {
-        // 将星球坐标转换为绘图坐标
-        float drawX =
-            (planets[i].x - float(MAX_MESH) * 0.5) * PLANET_DRAW_POS_RATIO;
-        float drawY =
-            (planets[i].y - float(MAX_MESH) * 0.5) * PLANET_DRAW_POS_RATIO;
-        float r = planets[i].radius;
-        // 根据星球发展、攻击、合作概率之比确定色相
-        // 发展概率大则偏绿色
-        // TODO：更合适的颜色
-        Civil &p = civils[planets[i].civilId];
-        float colorH = abs(p.rateDev) /
-                       (abs(p.rateDev) + abs(p.rateAtk) + abs(p.rateCoop));
-        // 根据星球科技确定饱和度与亮度
-        float colorS = exp(-0.01 * p.tech);
-        RgbColor tColor = hsvToRgb(
-            HsvColor(round(127.0 * colorH), round(255.0 * pow(colorS, 0.1)),
-                     63 + round(192.0 * (1.0 - colorS))));
-        float colorR = float(tColor.r) / 255.0;
-        float colorG = float(tColor.g) / 255.0;
-        float colorB = float(tColor.b) / 255.0;
+        // 将星球坐标转换为场景坐标
+        float drawX = (i.x - CENTER_POS) * PLANET_DRAW_POS_RATIO;
+        float drawY = (i.y - CENTER_POS) * PLANET_DRAW_POS_RATIO;
+        float r = i.radius;
 
-        drawCircle(drawX, drawY, r, colorR, colorG, colorB);
+        // 根据星球科技确定饱和度与亮度
+        Civil &p = civils[i.civilId];
+        float tTech = p.tech / maxTech;
+
+        // 根据星球发展、攻击、合作概率之比确定色相
+        // 攻击偏红色，发展偏绿色，合作偏蓝色
+        float tRed = abs(p.rateAtk);
+        float tGreen = abs(p.rateDev);
+        float tBlue = abs(p.rateCoop);
+        float tHue;
+        if (tRed > tBlue)
+            tHue = 0.3 * tGreen / (tRed + tGreen);
+        else
+            tHue = 0.3 + 0.4 * tBlue / (tGreen + tBlue);
+
+        RgbColor tColor = hsvToRgb(HsvColor(round(255.0 * tHue),
+                                            128 + round(127.0 * (1.0 - tTech)),
+                                            64 + round(191.0 * tTech)));
+        drawCircle(drawX, drawY, r, float(tColor.r) / 255.0,
+                   float(tColor.g) / 255.0, float(tColor.b) / 255.0);
     }
+    //    qDebug() << "test2";
 
     backend->unlock();
 
@@ -264,10 +274,17 @@ void MyOpenGLWidget::resizeGL()
 {
 }
 
+// x，y，r为场景坐标
 void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
                                 float colorG, float colorB)
 {
-    // 将绘图坐标转换为屏幕坐标
+#define chop(a) a = min(max(a, 0.0f), 1.0f)
+    chop(colorR);
+    chop(colorG);
+    chop(colorB);
+#undef chop
+
+    // 将场景坐标转换为屏幕坐标
     // 半径大的星球略微往下移动，防止挡住半径小的星球
     QMatrix4x4 matrix = projMat;
     matrix.translate(xPos + x, yPos + y, zPos - PLANET_Z - r);
@@ -276,7 +293,9 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
     QVector4D testVec = matrix * QVector4D(0.0, 0.0, 0.0, 1.0);
     if (abs(testVec.x()) > testVec.w() * 1.2) return;
     if (abs(testVec.y()) > testVec.w() * 1.2) return;
+
     shader.setUniformValue("matrix", matrix);
+    shader.setUniformValue("color", colorR, colorG, colorB);
 
     // 根据半径和缩放调整画圆的线段数
     int segCount = floor(1000.0 * r / abs(PLANET_Z - zPos));
@@ -291,16 +310,12 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
     float py = 0;
 
     // 构造星球的顶点数组
-    GLfloat vertices[300];
+    GLfloat vertices[150];
     for (int i = 0; i < segCount; ++i)
     {
-        vertices[i * 6] = px;
-        vertices[i * 6 + 1] = py;
-        vertices[i * 6 + 2] = 0.0;
-        vertices[i * 6 + 3] = colorR;
-        vertices[i * 6 + 4] = colorG;
-        vertices[i * 6 + 5] = colorB;
-
+        vertices[i * 3] = px;
+        vertices[i * 3 + 1] = py;
+        vertices[i * 3 + 2] = 0.0;
         float t = px;
         px = c * px - s * py;
         py = s * t + c * py;
@@ -308,14 +323,11 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
 
     // 写入星球的顶点数组
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, segCount * 6 * sizeof(GLfloat), &vertices,
+    glBufferData(GL_ARRAY_BUFFER, segCount * 3 * sizeof(GLfloat), &vertices,
                  GL_DYNAMIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat),
                           (GLvoid *)(0));
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
-                          (GLvoid *)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glDrawArrays(GL_POLYGON, 0, segCount);
 }
@@ -345,31 +357,6 @@ void MyOpenGLWidget::keyPressEvent(QKeyEvent *event)
             break;
     }
 }
-
-// void MyOpenGLWidget::keyReleaseEvent(QKeyEvent *event)
-//{
-//    switch (event->key())
-//    {
-//        case Qt::Key_L:
-//            xSpd = 0;
-//            break;
-//        case Qt::Key_J:
-//            xSpd = 0;
-//            break;
-//        case Qt::Key_I:
-//            ySpd = 0;
-//            break;
-//        case Qt::Key_K:
-//            ySpd = 0;
-//            break;
-//        case Qt::Key_U:
-//            zSpd = 0;
-//            break;
-//        case Qt::Key_O:
-//            zSpd = 0;
-//            break;
-//    }
-//}
 
 void MyOpenGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
@@ -412,24 +399,22 @@ void MyOpenGLWidget::mousePressEvent(QMouseEvent *event)
 {
     if (event->buttons() & Qt::LeftButton)
     {
-        // 将绘图坐标转换为屏幕坐标，获得z，w坐标
+        // 将场景坐标转换为屏幕坐标，获得z，w坐标
         QMatrix4x4 matrix = projMat;
         matrix.translate(xPos, yPos, zPos - PLANET_Z);
         QVector4D testVec = matrix * QVector4D(0.0, 0.0, 0.0, 1.0);
         // 将鼠标坐标转换为屏幕坐标
         float scrX = (float(event->pos().x()) / float(width()) * 2.0 - 1.0);
         float scrY = (1.0 - float(event->pos().y()) / float(height()) * 2.0);
-        // 将屏幕坐标转换为绘图坐标
+        // 将屏幕坐标转换为场景坐标
         matrix.setToIdentity();
         matrix.translate(-xPos, -yPos, -zPos + PLANET_Z);
         matrix *= projMat.inverted();
         testVec = matrix * QVector4D(scrX * testVec.w(), scrY * testVec.w(),
                                      testVec.z(), testVec.w());
-        // 将绘图坐标转换为星球坐标
-        float planetX =
-            testVec.x() / PLANET_DRAW_POS_RATIO + float(MAX_MESH) * 0.5;
-        float planetY =
-            testVec.y() / PLANET_DRAW_POS_RATIO + float(MAX_MESH) * 0.5;
+        // 将场景坐标转换为星球坐标
+        float planetX = testVec.x() / PLANET_DRAW_POS_RATIO + CENTER_POS;
+        float planetY = testVec.y() / PLANET_DRAW_POS_RATIO + CENTER_POS;
 
         // 遍历所有星球，选择半径最小的星球，防止被大的星球挡住
         // 速度较慢，无法用于鼠标移动时判定

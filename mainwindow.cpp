@@ -24,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(timer, &QTimer::timeout, this, &MainWindow::animate);
     connect(timer, &QTimer::timeout, ui->myOpenGLWidget,
             &MyOpenGLWidget::animate);
-    timer->start(33);
+    timer->start(20);
 }
 
 MainWindow::~MainWindow()

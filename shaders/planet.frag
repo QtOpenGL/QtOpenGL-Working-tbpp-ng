@@ -1,12 +1,12 @@
 R"(
 #version 330 core
 
-in vec3 nowColor;
+uniform vec3 color;
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 brightColor;
 
 void main()
 {
-    fragColor = brightColor = vec4(nowColor, 1.0);
+    fragColor = brightColor = vec4(color, 1.0);
 }
 )"

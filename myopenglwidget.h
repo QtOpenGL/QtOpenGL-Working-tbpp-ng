@@ -44,7 +44,6 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     void drawCircle(float x, float y, float r, float colorR, float colorG,
                     float colorB);
     void keyPressEvent(QKeyEvent *event);
-    //    void keyReleaseEvent(QKeyEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void wheelEvent(QWheelEvent *event);

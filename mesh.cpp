@@ -11,6 +11,7 @@
 using namespace std;
 
 const int MAX_MESH = 101;
+const float CENTER_POS = float(MAX_MESH - 1) * 0.5;
 const double MESH_SMALL_SCALE = 10.0;
 const int MAX_MESH_SMALL = ceil(double(MAX_MESH) / MESH_SMALL_SCALE);
 

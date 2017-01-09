@@ -16,8 +16,7 @@ void Backend::init()
     emit msg("后端正在初始化...");
 
     // 初始化星球
-    planets.push_back(Planet(
-        0, 0, Point(float(MAX_MESH) * 0.5, float(MAX_MESH) * 0.5), 100.0));
+    planets.push_back(Planet(0, 0, Point(CENTER_POS, CENTER_POS), 100.0));
     for (int i = 1; i < MAX_PLANET; ++i)
         planets.push_back(Planet(planets.size(), planets.size(),
                                  newRandom.getPoint() * 100.0,
