@@ -5,6 +5,7 @@
 #include <QString>
 #include <QThread>
 #include <QTimer>
+#include "statwindow.h"
 
 namespace Ui
 {
@@ -16,22 +17,21 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
    public:
-    QThread backendThread;
-    QTimer *timer;
-
-    explicit MainWindow(QWidget *parent = 0);
+    MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
    private:
     Ui::MainWindow *ui;
+    StatWindow statWindow;
+    QThread backendThread;
+    QTimer *timer;
 
    public slots:
     void animate();
     void receiveMsg(QString s);
-
-   private slots:
     void on_actionPause_triggered();
     void on_actionReset_triggered();
+    void on_actionStat_triggered();
 
    signals:
     backendInit();

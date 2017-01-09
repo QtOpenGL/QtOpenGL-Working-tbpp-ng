@@ -8,6 +8,8 @@
 #include "civil.h"
 #include "globaltime.h"
 
+const int MAX_CLOCK = 10000;
+
 class Backend : public QObject
 {
     Q_OBJECT

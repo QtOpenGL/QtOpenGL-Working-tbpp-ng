@@ -1,6 +1,6 @@
 QT += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += printsupport widgets
 
 TARGET = tbpp
 TEMPLATE = app
@@ -14,7 +14,9 @@ SOURCES += \
     mainwindow.cpp \
     mesh.cpp \
     myopenglwidget.cpp \
+    qcustomplot.cpp \
     space.cpp \
+    statwindow.cpp \
     utils.cpp \
 
 HEADERS += \
@@ -23,10 +25,14 @@ HEADERS += \
     globaltime.h \
     mainwindow.h \
     myopenglwidget.h \
+    qcustomplot.h \
     space.h \
+    statwindow.h \
     utils.h \
 
-FORMS += mainwindow.ui
+FORMS += \
+    mainwindow.ui \
+    statwindow.ui \
 
 LIBS += -lopengl32
 

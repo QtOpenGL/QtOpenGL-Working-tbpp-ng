@@ -1,4 +1,4 @@
-// 空间模块 by wd
+// 空间模块
 
 #include "space.h"
 

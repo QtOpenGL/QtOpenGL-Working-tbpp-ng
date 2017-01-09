@@ -35,11 +35,7 @@ void Backend::init()
 
 void Backend::lock()
 {
-    while (locked)
-    {
-        emit msg("等待后端响应...");
-        QThread::msleep(1);
-    }
+    while (locked) QThread::msleep(1);
     locked = true;
 }
 
@@ -55,15 +51,13 @@ void Backend::work()
         // TODO：将这句注释掉则全速运行
         //        QThread::msleep(100);
 
-        if (paused || locked)
-        {
-            QThread::msleep(1);
-            continue;
-        }
+        while (paused || locked) QThread::msleep(1);
 
         ++space.clock;
-        //        cout << "clock " << space.clock << " civils " << civils.size()
-        //             << " fleets " << fleets.size() << endl;
+        if (space.clock >= MAX_CLOCK) break;
+        if (PRINT_ACTION)
+            cout << "clock " << space.clock << " civils " << civils.size()
+                 << " fleets " << fleets.size() << endl;
 
         // 文明执行动作时不改变星球数量，会改变文明和舰队数量
         // 舰队执行动作时不改变舰队数量，需要删除的舰队标记为deleteLater

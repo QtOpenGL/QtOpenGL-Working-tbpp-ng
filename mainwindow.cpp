@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include <QDebug>
 #include "backend.h"
 #include "ui_mainwindow.h"
 
@@ -7,6 +6,8 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
+    setFixedSize(width(), height());
     connect(ui->myOpenGLWidget, &MyOpenGLWidget::msg, this,
             &MainWindow::receiveMsg);
 
@@ -22,9 +23,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     timer = new QTimer();
     connect(timer, &QTimer::timeout, this, &MainWindow::animate);
-    connect(timer, &QTimer::timeout, ui->myOpenGLWidget,
-            &MyOpenGLWidget::animate);
-    timer->start(20);
+    timer->start(33);
 }
 
 MainWindow::~MainWindow()
@@ -36,10 +35,32 @@ MainWindow::~MainWindow()
 
 void MainWindow::animate()
 {
-    ui->statusBar->showMessage(
-        QString("%1 frame/s, %2 clock/s")
-            .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 3))
-            .arg(QString::number(backend->fps, 'f', 3)));
+    ui->myOpenGLWidget->animate();
+    if (space.clock < MAX_CLOCK)
+    {
+        if (backend->paused)
+        {
+            ui->statusBar->showMessage(
+                QString("模拟已暂停 第 %1 轮，%2 轮/秒，%3 帧/秒")
+                    .arg(QString::number(space.clock))
+                    .arg(QString::number(backend->fps, 'f', 1))
+                    .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
+        }
+        else
+        {
+            ui->statusBar->showMessage(
+                QString("正在模拟... 第 %1 轮，%2 轮/秒，%3 帧/秒")
+                    .arg(QString::number(space.clock))
+                    .arg(QString::number(backend->fps, 'f', 1))
+                    .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
+        }
+    }
+    else
+    {
+        ui->statusBar->showMessage(
+            QString("模拟完成，%1 帧/秒")
+                .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
+    }
 }
 
 void MainWindow::receiveMsg(QString s)
@@ -66,4 +87,10 @@ void MainWindow::on_actionReset_triggered()
     ui->myOpenGLWidget->xSpd = 0.0;
     ui->myOpenGLWidget->ySpd = 0.0;
     ui->myOpenGLWidget->zSpd = 0.0;
+}
+
+void MainWindow::on_actionStat_triggered()
+{
+    statWindow.show();
+    statWindow.paintStat();
 }

@@ -1,4 +1,4 @@
-// 文明模块 by hrg
+// 文明模块
 
 #ifndef CIVIL_H
 #define CIVIL_H
@@ -110,29 +110,26 @@ class Civil
     // deathTime == -1表示没有死亡
     int planetId, civilId, parentCivilId, childCivilCount, birthTime, deathTime;
 
-    // 以下是状态参数
-    double tech, timeScale;
+    double tech, timeScale;  // 状态参数
 
-    // 以下是策略参数
-    double rateDev, rateAtk, rateCoop;
-    map<int, AiDouble> aiMap;  // 存储在各种情境下修改rate...用的参数
+    double rateDev, rateAtk, rateCoop;  // 第一层策略参数
+    map<int, AiDouble> aiMap;           // 第二层策略参数
 
     bool exiFleet[MAX_PLANET];
     Civil(int _planetId, int _civilId);
 
     void debugPrint();
-    // 处理策略参数
+    // 根据第二层策略参数修改第一层策略参数
     double aiMix(int mainKey, initializer_list<double> list);
-    // 将rate...的绝对值归一化，否则会越来越大
+    // 将rate...的绝对值归一化，防止过大
     void normalizeRate();
 
     void develop();
     void detect(Planet& targetPlanet);
 
-    // 以下是与策略有关的函数
     void action();
+    void actionNaive();
     void mutate();
-    // 平凡的进化策略，用于与厉害的进化策略对比
     void mutateNaive();
 };
 

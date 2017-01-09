@@ -23,6 +23,18 @@
       <height>840</height>
      </rect>
     </property>
+    <property name="minimumSize">
+     <size>
+      <width>0</width>
+      <height>0</height>
+     </size>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>16777215</width>
+      <height>16777215</height>
+     </size>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -53,6 +65,7 @@
      <string>显示</string>
     </property>
     <addaction name="actionReset"/>
+    <addaction name="actionStat"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_View"/>
@@ -118,6 +131,17 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+0</string>
+   </property>
+  </action>
+  <action name="actionStat">
+   <property name="text">
+    <string>统计</string>
+   </property>
+   <property name="toolTip">
+    <string>统计</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
    </property>
   </action>
  </widget>

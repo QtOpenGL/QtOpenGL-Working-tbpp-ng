@@ -1,4 +1,4 @@
-// 文明模块 by hrg
+// 文明模块
 
 #include "civil.h"
 
@@ -229,6 +229,7 @@ void Civil::detect(Planet& targetPlanet)
 
 void Civil::colonize(Civil& oldCivil, Civil& newCivil)
 {
+    newCivil.parentCivilId = oldCivil.civilId;
     ++oldCivil.childCivilCount;
 
 // 复制自己的科技与策略参数
@@ -251,8 +252,118 @@ void Civil::colonize(Civil& oldCivil, Civil& newCivil)
     friendship[newCivil.planetId][oldCivil.planetId] = CHILD_CIVIL_FRIENDSHIP;
 }
 
-// TODO：计算自己做各个动作的概率，然后选一个
 void Civil::action()
+{
+    // 回合开始前把rate...归一化
+    normalizeRate();
+
+    // 0：发展
+    // 1 ~ planets.size()：攻击
+    // planets.size() * + 1 ~ planets.size() * 2 + 1：合作
+    double actProb[MAX_PLANET * 2 + 1];
+    int actCount = planets.size() * 2 + 1;
+
+    // 发展的概率
+    actProb[0] = exp(aiMix(__LINE__, {rateDev}));
+    double sum = actProb[0];
+    // 攻击、合作的概率
+    for (size_t i = 0; i < planets.size(); ++i)
+    {
+        if (!space.isNear[planetId][i] || exiFleet[i])
+        {
+            actProb[i + 1] = actProb[i + planets.size() + 1] = 0.0;
+            continue;
+        }
+        actProb[i + 1] = exp(
+            aiMix(__LINE__,
+                  {rateAtk, civils[planets[i].civilId].tech / tech,
+                   space.getDis(planetId, i), 1.0 / space.getDis(planetId, i),
+                   friendship[planetId][i]}));
+        actProb[i + planets.size() + 1] = exp(
+            aiMix(__LINE__,
+                  {rateCoop, civils[planets[i].civilId].tech / tech,
+                   space.getDis(planetId, i), 1.0 / space.getDis(planetId, i),
+                   friendship[planetId][i]}));
+        sum += actProb[i + 1] + actProb[i + planets.size() + 1];
+    }
+
+    // 把概率归一化
+    double invSum = 1.0 / sum;
+    for (int i = 0; i < actCount; ++i) actProb[i] *= invSum;
+
+    double choice = newRandom.get();
+    int choiceIndex = 0;
+    double sumProb = 0.0;
+    while (choiceIndex < actCount)
+    {
+        sumProb += actProb[choiceIndex];
+        if (sumProb > choice) break;
+        ++choiceIndex;
+    }
+    if (choiceIndex >= actCount)
+    {
+        // ERROR
+    }
+
+    if (choiceIndex == 0)
+    {
+// 发展
+// 根据aiMap修改自己的rate...
+// 用行号表示情境
+#define tempMacro(a) a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop})
+        tempMacro(rateDev);
+        tempMacro(rateAtk);
+        tempMacro(rateCoop);
+#undef tempMacro
+        develop();
+    }
+    else if (size_t(choiceIndex) <= planets.size())
+    {
+        // 攻击
+        --choiceIndex;
+        Planet& p = planets[choiceIndex];
+// 根据aiMap修改自己的rate...
+// 用行号表示情境
+#define tempMacro(a)                                                       \
+    a += aiMix(__LINE__,                                                   \
+               {rateDev, rateAtk, rateCoop, tech / civils[p.civilId].tech, \
+                timeScale / civils[p.civilId].timeScale})
+        tempMacro(rateDev);
+        tempMacro(rateAtk);
+        tempMacro(rateCoop);
+#undef tempMacro
+        fleets.push_back(Fleet(civilId, p.planetId, ACT_ATK,
+                               space.getDis(planetId, p.planetId), tech));
+
+        if (PRINT_ACTION)
+            cout << civilId << " begin attack " << p.planetId << endl;
+        exiFleet[p.planetId] = true;
+    }
+    else
+    {
+        // 合作
+        choiceIndex -= planets.size() + 1;
+        Planet& p = planets[choiceIndex];
+// 根据aiMap修改自己的rate...
+// 用行号表示情境
+#define tempMacro(a)                                                       \
+    a += aiMix(__LINE__,                                                   \
+               {rateDev, rateAtk, rateCoop, tech / civils[p.civilId].tech, \
+                timeScale / civils[p.civilId].timeScale})
+        tempMacro(rateDev);
+        tempMacro(rateAtk);
+        tempMacro(rateCoop);
+#undef tempMacro
+        fleets.push_back(Fleet(civilId, p.planetId, ACT_COOP,
+                               space.getDis(planetId, p.planetId), tech));
+
+        if (PRINT_ACTION)
+            cout << civilId << " begin cooperate " << p.planetId << endl;
+        exiFleet[p.planetId] = true;
+    }
+}
+
+void Civil::actionNaive()
 {
     // 回合开始前把rate...归一化
     normalizeRate();
@@ -261,6 +372,14 @@ void Civil::action()
     double choice = newRandom.get();
     if (choice < 0.33)
     {
+// 发展
+// 根据aiMap修改自己的rate...
+// 用行号表示情境
+#define tempMacro(a) a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop})
+        tempMacro(rateDev);
+        tempMacro(rateAtk);
+        tempMacro(rateCoop);
+#undef tempMacro
         develop();
     }
     else if (choice < 0.67)
@@ -276,7 +395,6 @@ void Civil::action()
                 exp(rateAtk) * (-friendship[planetId][i] + 1.0) > 1.0)
             {
 // 根据aiMap修改自己的rate...
-// 参数为自己的rate...，双方科技的比值，时间曲率的比值
 // 用行号表示情境
 #define tempMacro(a)                                              \
     a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop,             \
@@ -306,6 +424,8 @@ void Civil::action()
             if (newRandom.get() < invSize &&
                 exp(rateCoop) * (friendship[planetId][i] + 1.0) > 1.0)
             {
+// 根据aiMap修改自己的rate...
+// 用行号表示情境
 #define tempMacro(a)                                              \
     a += aiMix(__LINE__, {rateDev, rateAtk, rateCoop,             \
                           tech / civils[planets[i].civilId].tech, \

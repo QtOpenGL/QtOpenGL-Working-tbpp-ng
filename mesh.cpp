@@ -1,4 +1,4 @@
-// 网格 by wd
+// 网格
 
 #ifndef MESH_CPP
 #define MESH_CPP

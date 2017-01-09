@@ -1,4 +1,4 @@
-// 空间模块 by wd
+// 空间模块
 
 #ifndef SPACE_H
 #define SPACE_H
@@ -10,12 +10,13 @@
 
 using namespace std;
 
-const int MAX_PLANET = 1000;
+const int MAX_PLANET = 200;
 const double G_CONST = 0.1;  // 引力强度
 const double RG_CONST = 1.2;  // 描述星球密度，影响黑洞形状，必须大于9/8
 const int MAX_CURV_ITER = 10;
 const double MIN_LOSS = 1.0e-7;
 const double MIN_DIS_SEG_LEN = 1.0;
+const double NEAR_DIS = double(MAX_MESH) * 0.1;
 
 class Planet : public Point
 {
@@ -55,7 +56,10 @@ class Space
     // curv..2为更新度规张量时的临时变量
     Mesh<double> curvxx2, curvxy2, curvyy2, curvtt2;
     // 星球距离的缓存
+    // isNear[i][i] == false，i不在nearPlanetId[i]中
     double planetDis[MAX_PLANET][MAX_PLANET];
+    bool isNear[MAX_PLANET][MAX_PLANET];
+    vector<int> nearPlanetId[MAX_PLANET];
 
     Space() : clock(0)
     {
@@ -110,9 +114,9 @@ class Space
             curvtt2(i, j) = 1.0;
         }
 
-        //        for (size_t k = 0; k < planets.size(); ++k)
-        for (size_t k = 0; k < 1; ++k)
+        for (size_t k = 0; k < planets.size(); ++k)
         {
+            if (k > 0) break;
             const Planet& p = planets[k];
 
             // 计算当前星球到各个点的距离
@@ -224,13 +228,26 @@ class Space
     {
         for (size_t i = 0; i < planets.size(); ++i)
             for (size_t j = i; j < planets.size(); ++j)
-            {
                 if (i == j)
-                    planetDis[i][j] = 0.0;
+                {
+                    planetDis[i][i] = 0.0;
+                    isNear[i][i] = false;
+                }
                 else
+                {
                     planetDis[i][j] = planetDis[j][i] = getDis(
                         planets[i].x, planets[i].y, planets[j].x, planets[j].y);
-            }
+                    if (planetDis[i][j] < NEAR_DIS)
+                    {
+                        isNear[i][j] = isNear[j][i] = true;
+                        nearPlanetId[i].push_back(j);
+                        nearPlanetId[j].push_back(i);
+                    }
+                    else
+                    {
+                        isNear[i][j] = isNear[j][i] = false;
+                    }
+                }
     }
 };
 

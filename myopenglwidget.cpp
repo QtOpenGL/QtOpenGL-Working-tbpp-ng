@@ -1,14 +1,10 @@
 #include "myopenglwidget.h"
-#include <QDebug>
 #include <QKeyEvent>
 #include <QThread>
 #include <QVector4D>
+#include <cassert>
 #include <cmath>
-#include "backend.h"
-#include "civil.h"
 #include "color.cpp"
-#include "globaltime.h"
-#include "utils.h"
 
 const float PLANET_Z = 2.0;                // 星球的z坐标
 const float PLANET_DRAW_POS_RATIO = 0.05;  // 星球坐标与场景坐标的比例
@@ -43,6 +39,7 @@ MyOpenGLWidget::MyOpenGLWidget(QWidget *parent)
       mouseInRightEdge(false),
       mouseInTopEdge(false),
       mouseInBottomEdge(false),
+      selectedPlanetId(-1),
       frameCount(0),
       lastFpsTime(0),
       fps(0.0)
@@ -81,6 +78,14 @@ void MyOpenGLWidget::initializeGL()
 #include "shaders/planet.frag"
                                    );
     shader.link();
+
+    shaderLine.addShaderFromSourceCode(QOpenGLShader::Vertex,
+#include "shaders/line.vert"
+                                       );
+    shaderLine.addShaderFromSourceCode(QOpenGLShader::Fragment,
+#include "shaders/line.frag"
+                                       );
+    shaderLine.link();
 
     shaderBlur.addShaderFromSourceCode(QOpenGLShader::Vertex,
 #include "shaders/blur.vert"
@@ -184,42 +189,60 @@ void MyOpenGLWidget::initializeGL()
 void MyOpenGLWidget::paintGL()
 {
     if (paused) return;
+    // cout << "test0" << endl;
+
+    backend->lock();
 
     // 在frameBuffer中绘制星球
     glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     shader.bind();
     vertexArray.bind();
-
-    backend->lock();
-    //    qDebug() << "test0";
+    //    cout << "test1" << endl;
 
     // 确定星球颜色时以科技最高的星球为参考
     double maxTech = 0.0;
-    for (auto i : planets) maxTech = max(maxTech, civils[i.civilId].tech);
-    //    qDebug() << "test1";
-
-    for (auto i : planets)
+    for (size_t i = 0; i < planets.size(); ++i)
     {
+        //        assert(planets[i].civilId >= 0);
+        //        assert(size_t(planets[i].civilId) < civils.size());
+        maxTech = max(maxTech, civils[planets[i].civilId].tech);
+    }
+    //    cout << "test2" << endl;
+
+    for (size_t i = 0; i < planets.size(); ++i)
+    {
+        Planet &p = planets[i];
         // 将星球坐标转换为场景坐标
-        float drawX = (i.x - CENTER_POS) * PLANET_DRAW_POS_RATIO;
-        float drawY = (i.y - CENTER_POS) * PLANET_DRAW_POS_RATIO;
-        float r = i.radius;
+        float drawX = planetToDrawPos(p.x);
+        float drawY = planetToDrawPos(p.y);
+        float r = p.radius;
 
         // 根据星球科技确定饱和度与亮度
-        Civil &p = civils[i.civilId];
-        float tTech = p.tech / maxTech;
+        Civil &c = civils[p.civilId];
+        float tTech = c.tech / maxTech;
 
-        // 根据星球发展、攻击、合作概率之比确定色相
-        // 攻击偏红色，发展偏绿色，合作偏蓝色
-        float tRed = abs(p.rateAtk);
-        float tGreen = abs(p.rateDev);
-        float tBlue = abs(p.rateCoop);
         float tHue;
-        if (tRed > tBlue)
-            tHue = 0.3 * tGreen / (tRed + tGreen);
+        if (selectedPlanetId >= 0 && p.planetId != selectedPlanetId)
+        {
+            float tFriendship = Civil::friendship[selectedPlanetId][p.planetId];
+            if (tFriendship > 0.0)
+                tHue = 0.3 + 0.3 * (1.0 - exp(-tFriendship));
+            else
+                tHue = 0.3 * exp(tFriendship);
+        }
         else
-            tHue = 0.3 + 0.4 * tBlue / (tGreen + tBlue);
+        {
+            // 根据星球发展、攻击、合作概率之比确定色相
+            // 攻击偏红色，发展偏绿色，合作偏蓝色
+            float tRed = abs(c.rateAtk);
+            float tGreen = abs(c.rateDev);
+            float tBlue = abs(c.rateCoop);
+            if (tRed > tBlue)
+                tHue = 0.3 * tGreen / (tRed + tGreen);
+            else
+                tHue = 0.3 + 0.3 * tBlue / (tGreen + tBlue);
+        }
 
         RgbColor tColor = hsvToRgb(HsvColor(round(255.0 * tHue),
                                             128 + round(127.0 * (1.0 - tTech)),
@@ -227,20 +250,68 @@ void MyOpenGLWidget::paintGL()
         drawCircle(drawX, drawY, r, float(tColor.r) / 255.0,
                    float(tColor.g) / 255.0, float(tColor.b) / 255.0);
     }
-    //    qDebug() << "test2";
-
-    backend->unlock();
+    //    cout << "test3" << endl;
 
     vertexArray.release();
     shader.release();
+    // cout << "test4" << endl;
+
+    shaderLine.bind();
+    vertexArray.bind();
+    // cout << "test5" << endl;
+
+    if (selectedPlanetId >= 0)
+    {
+        // 绘制选中星球的圆圈，无发光效果
+        Planet &p = planets[selectedPlanetId];
+        // 将星球坐标转换为场景坐标
+        float drawX = planetToDrawPos(p.x);
+        float drawY = planetToDrawPos(p.y);
+        float r = p.radius + 0.005;
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        drawCircle(drawX, drawY, r, 1.0, 1.0, 1.0);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        // 绘制选中星球到母星球的线段
+        /* DEPRECATED
+        vector<GLfloat> vertices(MAX_PLANET * 3);
+        int vertexCount = 0;
+        int nowCivilId = planets[selectedPlanetId].civilId;
+        while (true)
+        {
+            Civil &c = civils[nowCivilId];
+            if (c.parentCivilId == -1 ||
+                (c.parentCivilId >= 0 &&
+                 civils[c.parentCivilId].deathTime >= 0))
+                break;
+            Planet &p = planets[c.planetId];
+            float drawX = planetToDrawPos(p.x);
+            float drawY = planetToDrawPos(p.y);
+            vertices[vertexCount * 3] = drawX;
+            vertices[vertexCount * 3 + 1] = drawY;
+            vertices[vertexCount * 3 + 2] = 0.0;
+            nowCivilId = c.parentCivilId;
+            ++vertexCount;
+        }
+        if (vertexCount > 0) drawLine(vertices, vertexCount, 1.0, 1.0, 1.0);
+        */
+    }
+    // cout << "test6" << endl;
+
+    vertexArray.release();
+    shaderLine.release();
+    // cout << "test7" << endl;
+
+    backend->unlock();
+    // cout << "test8" << endl;
 
     // 在pingpongFrameBuffers中绘制发光效果
     shaderBlur.bind();
     bool horizontal = true;
     for (int i = 0; i < MAX_BLUR_ITER; ++i)
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFrameBuffers[horizontal]);
         shaderBlur.setUniformValue("horizontal", horizontal);
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFrameBuffers[horizontal]);
         glActiveTexture(GL_TEXTURE0);
         if (i == 0)
             glBindTexture(GL_TEXTURE_2D, colorBuffers[1]);
@@ -255,9 +326,9 @@ void MyOpenGLWidget::paintGL()
     shaderBlur.release();
 
     // 将colorBuffers[0]中的暗区与pingpongColorBuffers中的亮区合成
+    shaderPost.bind();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    shaderPost.bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
     glActiveTexture(GL_TEXTURE1);
@@ -267,6 +338,7 @@ void MyOpenGLWidget::paintGL()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     scrVertexArray.release();
     shaderPost.release();
+    // cout << "test9" << endl;
 }
 
 // 留空
@@ -278,23 +350,24 @@ void MyOpenGLWidget::resizeGL()
 void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
                                 float colorG, float colorB)
 {
-#define chop(a) a = min(max(a, 0.0f), 1.0f)
-    chop(colorR);
-    chop(colorG);
-    chop(colorB);
-#undef chop
-
     // 将场景坐标转换为屏幕坐标
     // 半径大的星球略微往下移动，防止挡住半径小的星球
     QMatrix4x4 matrix = projMat;
     matrix.translate(xPos + x, yPos + y, zPos - PLANET_Z - r);
 
-    // 判断星球是否在视线外，在视线外则不绘制
+    // 在视线外则不绘制
     QVector4D testVec = matrix * QVector4D(0.0, 0.0, 0.0, 1.0);
     if (abs(testVec.x()) > testVec.w() * 1.2) return;
     if (abs(testVec.y()) > testVec.w() * 1.2) return;
-
+    // Qt的语义有问题，setUniformValue对任何shader都有效，而不是当前的shader
     shader.setUniformValue("matrix", matrix);
+
+// 防止颜色超出范围
+#define chop(a) a = min(max(a, 0.0f), 1.0f)
+    chop(colorR);
+    chop(colorG);
+    chop(colorB);
+#undef chop
     shader.setUniformValue("color", colorR, colorG, colorB);
 
     // 根据半径和缩放调整画圆的线段数
@@ -309,7 +382,7 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
     float px = r;
     float py = 0;
 
-    // 构造星球的顶点数组
+    // 构造顶点数组
     GLfloat vertices[150];
     for (int i = 0; i < segCount; ++i)
     {
@@ -321,7 +394,7 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
         py = s * t + c * py;
     }
 
-    // 写入星球的顶点数组
+    // 写入顶点数组
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, segCount * 3 * sizeof(GLfloat), &vertices,
                  GL_DYNAMIC_DRAW);
@@ -329,7 +402,42 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
                           (GLvoid *)(0));
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // 绘制
     glDrawArrays(GL_POLYGON, 0, segCount);
+}
+
+void MyOpenGLWidget::drawLine(vector<GLfloat> &vertices, int vertexCount,
+                              float colorR, float colorG, float colorB)
+{
+    // 将场景坐标转换为屏幕坐标
+    // 半径大的星球略微往下移动，防止挡住半径小的星球
+    QMatrix4x4 matrix = projMat;
+    matrix.translate(xPos, yPos, zPos - PLANET_Z);
+
+// 防止颜色超出范围
+#define chop(a) a = min(max(a, 0.0f), 1.0f)
+    chop(colorR);
+    chop(colorG);
+    chop(colorB);
+#undef chop
+    shader.setUniformValue("color", colorR, colorG, colorB);
+
+    // 构造顶点数组
+    GLfloat vertices2[MAX_PLANET * 3];
+    for (int i = 0; i < vertexCount * 3; ++i) vertices2[i] = vertices[i];
+
+    // 写入顶点数组
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, vertexCount * 3 * sizeof(GLfloat), &vertices2,
+                 GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat),
+                          (GLvoid *)(0));
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // 绘制
+    glDrawArrays(GL_LINE_STRIP, 0, vertexCount);
 }
 
 void MyOpenGLWidget::keyPressEvent(QKeyEvent *event)
@@ -413,32 +521,30 @@ void MyOpenGLWidget::mousePressEvent(QMouseEvent *event)
         testVec = matrix * QVector4D(scrX * testVec.w(), scrY * testVec.w(),
                                      testVec.z(), testVec.w());
         // 将场景坐标转换为星球坐标
-        float planetX = testVec.x() / PLANET_DRAW_POS_RATIO + CENTER_POS;
-        float planetY = testVec.y() / PLANET_DRAW_POS_RATIO + CENTER_POS;
+        float planetX = drawToPlanetPos(testVec.x());
+        float planetY = drawToPlanetPos(testVec.y());
 
         // 遍历所有星球，选择半径最小的星球，防止被大的星球挡住
         // 速度较慢，无法用于鼠标移动时判定
         // TODO：减少遍历数
         int nowPlanetId = -1;
         float nowR = numeric_limits<float>::infinity();
-        for (auto i : planets)
+        for (size_t i = 0; i < planets.size(); ++i)
         {
             // 星球半径太小时给一个较大的选择半径
-            float selectR = max(i.radius, 0.01f) / PLANET_DRAW_POS_RATIO;
-            if (sqr(planetX - i.x) + sqr(planetY - i.y) < sqr(selectR))
+            float selectR =
+                max(planets[i].radius, 0.01f) / PLANET_DRAW_POS_RATIO;
+            if (sqr(planetX - planets[i].x) + sqr(planetY - planets[i].y) <
+                sqr(selectR))
             {
                 if (selectR < nowR)
                 {
-                    nowPlanetId = i.planetId;
+                    nowPlanetId = planets[i].planetId;
                     nowR = selectR;
                 }
             }
         }
-        if (nowPlanetId >= 0)
-        {
-            Planet &p = planets[nowPlanetId];
-            // TODO：选中之后的动作
-        }
+        selectedPlanetId = nowPlanetId;
     }
 }
 
@@ -450,8 +556,20 @@ void MyOpenGLWidget::wheelEvent(QWheelEvent *event)
         zPos -= MOVE_SPD_WHEEL * (PLANET_Z - zPos);
 }
 
+float MyOpenGLWidget::planetToDrawPos(float x)
+{
+    return (x - CENTER_POS) * PLANET_DRAW_POS_RATIO;
+}
+
+float MyOpenGLWidget::drawToPlanetPos(float x)
+{
+    return x / PLANET_DRAW_POS_RATIO + CENTER_POS;
+}
+
 void MyOpenGLWidget::animate()
 {
+    if (paused) return;
+
     if (mouseInLeftEdge)
         xSpd += -MOVE_SPD_MOUSE_EDGE * (PLANET_Z - zPos);
     else if (mouseInRightEdge)
