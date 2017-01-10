@@ -1,3 +1,5 @@
+// 主程序
+
 #include <QApplication>
 #include "mainwindow.h"
 

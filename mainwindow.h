@@ -1,3 +1,5 @@
+// 主窗口
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 

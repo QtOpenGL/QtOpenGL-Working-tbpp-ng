@@ -1,3 +1,5 @@
+// 统计窗口
+
 #ifndef STATWINDOW_H
 #define STATWINDOW_H
 
@@ -5,7 +7,7 @@
 #include <QWidget>
 #include <cmath>
 #include "civil.h"
-#include "qcustomplot.h"
+#include "libs/qcustomplot.h"
 
 namespace Ui
 {
@@ -25,4 +27,4 @@ class StatWindow : public QWidget
     Ui::statWindow *ui;
 };
 
-#endif  // STATWINDOW_H
+#endif

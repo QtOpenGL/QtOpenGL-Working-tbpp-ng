@@ -1,3 +1,5 @@
+// 星图控件
+
 #include "myopenglwidget.h"
 #include "color.cpp"
 

@@ -6,6 +6,7 @@ TARGET = tbpp
 TEMPLATE = app
 
 SOURCES += \
+    libs/qcustomplot.cpp \
     backend.cpp \
     civil.cpp \
     color.cpp \
@@ -14,19 +15,18 @@ SOURCES += \
     mainwindow.cpp \
     mesh.cpp \
     myopenglwidget.cpp \
-    qcustomplot.cpp \
     serial.cpp \
     space.cpp \
     statwindow.cpp \
     utils.cpp \
 
 HEADERS += \
+    libs/qcustomplot.h \
     backend.h \
     civil.h \
     globaltime.h \
     mainwindow.h \
     myopenglwidget.h \
-    qcustomplot.h \
     space.h \
     statwindow.h \
     utils.h \

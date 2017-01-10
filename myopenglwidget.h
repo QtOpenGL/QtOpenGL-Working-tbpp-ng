@@ -1,5 +1,7 @@
-#ifndef GLWIDGET_H
-#define GLWIDGET_H
+// 星图控件
+
+#ifndef MYOPENGLWIDGET_H
+#define MYOPENGLWIDGET_H
 
 #include <QKeyEvent>
 #include <QMatrix4x4>

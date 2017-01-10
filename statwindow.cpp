@@ -1,3 +1,5 @@
+// 统计窗口
+
 #include "statwindow.h"
 #include "ui_statwindow.h"
 

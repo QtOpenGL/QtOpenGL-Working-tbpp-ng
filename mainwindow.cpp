@@ -1,3 +1,5 @@
+// 主窗口
+
 #include "mainwindow.h"
 #include "serial.cpp"
 #include "ui_mainwindow.h"
