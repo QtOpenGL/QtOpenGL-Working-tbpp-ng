@@ -66,6 +66,11 @@ class Fleet
     double initDis, remainDis, initTech;
     bool deleteLater;
 
+    // 默认构造函数
+    Fleet()
+    {
+    }
+
     Fleet(int _fromCivilId, int _targetPlanetId, ActType _actType,
           double _initDis, double _initTech)
         : fromCivilId(_fromCivilId),
@@ -80,10 +85,8 @@ class Fleet
     }
 
     void debugPrint();
-
     void attack();
     void cooperate();
-
     void action();
 };
 
@@ -128,8 +131,8 @@ class Civil
     void detect(Planet& targetPlanet);
 
     void action();
-    void actionNaive();
     void mutate();
+    // 平凡的进化策略，用于与厉害的进化策略对比
     void mutateNaive();
 };
 

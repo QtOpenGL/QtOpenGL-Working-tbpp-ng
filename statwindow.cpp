@@ -1,7 +1,4 @@
 #include "statwindow.h"
-#include <QVector>
-#include <cmath>
-#include "civil.h"
 #include "ui_statwindow.h"
 
 StatWindow::StatWindow(QWidget *parent)

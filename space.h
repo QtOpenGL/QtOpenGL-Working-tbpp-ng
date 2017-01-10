@@ -4,19 +4,19 @@
 #define SPACE_H
 
 #include <cmath>
-#include <vector>
 #include "mesh.cpp"
 #include "utils.h"
 
 using namespace std;
 
-const int MAX_PLANET = 200;
-const double G_CONST = 0.1;  // 引力强度
-const double RG_CONST = 1.2;  // 描述星球密度，影响黑洞形状，必须大于9/8
-const int MAX_CURV_ITER = 10;
-const double MIN_LOSS = 1.0e-7;
-const double MIN_DIS_SEG_LEN = 1.0;
-const double NEAR_DIS = double(MAX_MESH) * 0.1;
+const int MAX_PLANET = 100;
+const double G_CONST = 0.1;           // 引力强度
+const double RG_CONST = 1.2;          // 星球密度，必须大于9/8
+const int MAX_CURV_ITER = 10;         // 计算曲率时的最大迭代次数
+const double MIN_CURV_MASS = 0.5;     // 计算曲率时考虑的最小质量
+const double MIN_CURV_LOSS = 1.0e-7;  // 计算曲率时允许的误差
+const double MIN_DIS_SEG_LEN = 1.0;   // 计算距离时切分测地线的长度
+const double NEAR_DIS = double(MAX_MESH) * 0.1;  // 用于缓存较近的星球
 
 class Planet : public Point
 {
@@ -33,6 +33,11 @@ class Planet : public Point
     bool ruinMark;    // 是否为废墟
     double lastTech;  // 上个文明的科技
 
+    // 默认构造函数
+    Planet()
+    {
+    }
+
     Planet(int _planetId, int _civilId, Point _p, double _mass)
         : Point(_p),
           planetId(_planetId),
@@ -45,7 +50,7 @@ class Planet : public Point
     }
 };
 
-extern vector<Planet> planets;
+extern Planet planets[MAX_PLANET];
 
 class Space
 {
@@ -53,13 +58,12 @@ class Space
     int clock;
     // 度规张量
     Mesh<double> curvxx, curvxy, curvyy, curvtt;
-    // curv..2为更新度规张量时的临时变量
+    // 更新度规张量用的临时变量
     Mesh<double> curvxx2, curvxy2, curvyy2, curvtt2;
     // 星球距离的缓存
-    // isNear[i][i] == false，i不在nearPlanetId[i]中
+    // isNear[i][i] == false
     double planetDis[MAX_PLANET][MAX_PLANET];
     bool isNear[MAX_PLANET][MAX_PLANET];
-    vector<int> nearPlanetId[MAX_PLANET];
 
     Space() : clock(0)
     {
@@ -114,10 +118,10 @@ class Space
             curvtt2(i, j) = 1.0;
         }
 
-        for (size_t k = 0; k < planets.size(); ++k)
+        for (int k = 0; k < MAX_PLANET; ++k)
         {
-            if (k > 0) break;
             const Planet& p = planets[k];
+            if (p.mass < MIN_CURV_MASS) break;
 
             // 计算当前星球到各个点的距离
             // 先在小网格中计算，再在大网格中插值
@@ -175,10 +179,8 @@ class Space
                 double pCurvxy = (spaceScale - 1.0) * ex * ey;
                 double pCurvyy = (sqr(ex) + spaceScale * sqr(ey));
 
-                // 把当前星球产生的空间伸缩率加到之前的度规上
-                // 目前用的是矩阵乘法，不满足交换律
-                // 不过空间伸缩率接近1时对易项是高阶小量
-                // 接下来只要对质量较大的星球作特殊处理
+                // 将当前星球产生的空间伸缩率加到之前的度规上
+                // 矩阵乘法不满足交换律，但是迭代得到的结果与顺序无关
                 double newCurvxx =
                     curvxx2(i, j) * pCurvxx + curvxy2(i, j) * pCurvxy;
                 double newCurvxy =
@@ -220,14 +222,14 @@ class Space
             curvxy = curvxy2;
             curvyy = curvyy2;
             curvtt = curvtt2;
-            if (loss < MIN_LOSS) break;
+            if (loss < MIN_CURV_LOSS) break;
         }
     }
 
     void calcPlanetDis()
     {
-        for (size_t i = 0; i < planets.size(); ++i)
-            for (size_t j = i; j < planets.size(); ++j)
+        for (int i = 0; i < MAX_PLANET; ++i)
+            for (int j = 0; j < MAX_PLANET; ++j)
                 if (i == j)
                 {
                     planetDis[i][i] = 0.0;
@@ -238,15 +240,9 @@ class Space
                     planetDis[i][j] = planetDis[j][i] = getDis(
                         planets[i].x, planets[i].y, planets[j].x, planets[j].y);
                     if (planetDis[i][j] < NEAR_DIS)
-                    {
                         isNear[i][j] = isNear[j][i] = true;
-                        nearPlanetId[i].push_back(j);
-                        nearPlanetId[j].push_back(i);
-                    }
                     else
-                    {
                         isNear[i][j] = isNear[j][i] = false;
-                    }
                 }
     }
 };

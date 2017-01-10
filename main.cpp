@@ -5,12 +5,10 @@ const int MAX_MAIN_LOOP = 100;
 int main()
 {
     // 初始化星球
-    planets.push_back(Planet(
-        0, 0, Point(float(MAX_MESH) * 0.5, float(MAX_MESH) * 0.5), 100.0));
+    planets[0] = Planet(0, 0, Point(CENTER_POS, CENTER_POS), 100.0);
     for (int i = 1; i < MAX_PLANET; ++i)
-        planets.push_back(Planet(planets.size(), planets.size(),
-                                 newRandom.getPoint() * 100.0,
-                                 newRandom.get() * 1.0));
+        planets[i] =
+            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 1.0);
     space.calcCurv();
     space.calcPlanetDis();
 
@@ -32,7 +30,7 @@ int main()
         // 舰队执行动作时不改变舰队数量，需要删除的舰队标记为deleteLater
         // 因此可以放在for循环里
         cout << "civils action" << endl;
-        for (size_t i = 0; i < planets.size(); ++i)
+        for (int i = 1; i < MAX_PLANET; ++i)
             civils[planets[i].civilId].action();
 
         cout << "fleets action" << endl;
@@ -49,7 +47,7 @@ int main()
         }
 
         cout << "civils print" << endl;
-        for (size_t i = 0; i < planets.size(); ++i)
+        for (int i = 1; i < MAX_PLANET; ++i)
             civils[planets[i].civilId].debugPrint();
 
         cout << "fleets print" << endl;

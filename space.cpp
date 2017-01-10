@@ -2,6 +2,6 @@
 
 #include "space.h"
 
-vector<Planet> planets;
+Planet planets[MAX_PLANET];
 
 Space space;

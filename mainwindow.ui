@@ -56,9 +56,10 @@
     <property name="title">
      <string>文件</string>
     </property>
+    <addaction name="actionPause"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
-    <addaction name="actionPause"/>
+    <addaction name="actionSaveAs"/>
    </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
@@ -135,13 +136,24 @@
   </action>
   <action name="actionStat">
    <property name="text">
-    <string>统计</string>
+    <string>统计...</string>
    </property>
    <property name="toolTip">
     <string>统计</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionSaveAs">
+   <property name="text">
+    <string>另存为...</string>
+   </property>
+   <property name="toolTip">
+    <string>另存为</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+S</string>
    </property>
   </action>
  </widget>

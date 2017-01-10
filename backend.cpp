@@ -1,7 +1,6 @@
 // 后端，用于在独立的线程中进行模拟文明的运算
 
 #include "backend.h"
-#include <QThread>
 
 Backend *backend;
 
@@ -16,11 +15,10 @@ void Backend::init()
     emit msg("后端正在初始化...");
 
     // 初始化星球
-    planets.push_back(Planet(0, 0, Point(CENTER_POS, CENTER_POS), 100.0));
+    planets[0] = Planet(0, 0, Point(CENTER_POS, CENTER_POS), 100.0);
     for (int i = 1; i < MAX_PLANET; ++i)
-        planets.push_back(Planet(planets.size(), planets.size(),
-                                 newRandom.getPoint() * 100.0,
-                                 newRandom.get() * 1.0));
+        planets[i] =
+            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 1.0);
     space.calcCurv();
     space.calcPlanetDis();
 
@@ -62,7 +60,7 @@ void Backend::work()
         // 文明执行动作时不改变星球数量，会改变文明和舰队数量
         // 舰队执行动作时不改变舰队数量，需要删除的舰队标记为deleteLater
         // 因此可以放在for循环里
-        for (size_t i = 0; i < planets.size(); ++i)
+        for (int i = 0; i < MAX_PLANET; ++i)
             civils[planets[i].civilId].action();
         for (auto i = fleets.begin(); i != fleets.end(); ++i) i->action();
 

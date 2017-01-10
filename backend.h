@@ -5,6 +5,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QThread>
 #include "civil.h"
 #include "globaltime.h"
 

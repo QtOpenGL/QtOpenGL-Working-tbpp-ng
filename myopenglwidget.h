@@ -1,14 +1,16 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
+#include <QKeyEvent>
 #include <QMatrix4x4>
 #include <QOpenGLExtraFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
+#include <QThread>
+#include <QVector4D>
+#include <cmath>
 #include "backend.h"
-#include "civil.h"
-#include "globaltime.h"
 
 class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
 {

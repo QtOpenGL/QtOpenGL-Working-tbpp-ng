@@ -3,42 +3,23 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <array>
 #include <ctime>
-#include <fstream>
-#include <memory>
 #include <random>
 
 using namespace std;
 
 #define sqr(x) ((x) * (x))
 
-// 将任何对象在内存中的数据转换为array
-// 注意：不包括对象内的指针指向的内容！
-template <typename T>
-array<unsigned char, sizeof(T)> serialize(const T& object)
-{
-    array<unsigned char, sizeof(T)> bytes;
-    const unsigned char* beginObj =
-        reinterpret_cast<const unsigned char*>(addressof(object));
-    const unsigned char* endObj = beginObj + sizeof(T);
-    copy(beginObj, endObj, begin(bytes));
-    return bytes;
-}
-
-// 从array恢复对象
-template <typename T>
-void deserialize(const array<unsigned char, sizeof(T)>& bytes, T& object)
-{
-    copy(begin(bytes), end(bytes),
-         reinterpret_cast<unsigned char*>(addressof(object)));
-}
-
 // 包装一对double
 class Point
 {
    public:
     double x, y;
+
+    // 默认构造函数
+    Point()
+    {
+    }
 
     Point(double _x, double _y) : x(_x), y(_y)
     {

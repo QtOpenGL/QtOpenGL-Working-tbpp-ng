@@ -15,6 +15,7 @@ SOURCES += \
     mesh.cpp \
     myopenglwidget.cpp \
     qcustomplot.cpp \
+    serial.cpp \
     space.cpp \
     statwindow.cpp \
     utils.cpp \

@@ -1,9 +1,4 @@
 #include "myopenglwidget.h"
-#include <QKeyEvent>
-#include <QThread>
-#include <QVector4D>
-#include <cassert>
-#include <cmath>
 #include "color.cpp"
 
 const float PLANET_Z = 2.0;                // 星球的z坐标
@@ -202,15 +197,11 @@ void MyOpenGLWidget::paintGL()
 
     // 确定星球颜色时以科技最高的星球为参考
     double maxTech = 0.0;
-    for (size_t i = 0; i < planets.size(); ++i)
-    {
-        //        assert(planets[i].civilId >= 0);
-        //        assert(size_t(planets[i].civilId) < civils.size());
+    for (int i = 0; i < MAX_PLANET; ++i)
         maxTech = max(maxTech, civils[planets[i].civilId].tech);
-    }
     //    cout << "test2" << endl;
 
-    for (size_t i = 0; i < planets.size(); ++i)
+    for (int i = 0; i < MAX_PLANET; ++i)
     {
         Planet &p = planets[i];
         // 将星球坐标转换为场景坐标
@@ -529,7 +520,7 @@ void MyOpenGLWidget::mousePressEvent(QMouseEvent *event)
         // TODO：减少遍历数
         int nowPlanetId = -1;
         float nowR = numeric_limits<float>::infinity();
-        for (size_t i = 0; i < planets.size(); ++i)
+        for (int i = 0; i < MAX_PLANET; ++i)
         {
             // 星球半径太小时给一个较大的选择半径
             float selectR =

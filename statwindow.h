@@ -1,12 +1,15 @@
 #ifndef STATWINDOW_H
 #define STATWINDOW_H
 
+#include <QVector>
 #include <QWidget>
+#include <cmath>
+#include "civil.h"
 #include "qcustomplot.h"
 
 namespace Ui
 {
-class statWindow;
+    class statWindow;
 }
 
 class StatWindow : public QWidget
