@@ -9,7 +9,7 @@
 
 using namespace std;
 
-const int MAX_PLANET = 100;
+const int MAX_PLANET = 500;
 const double G_CONST = 0.1;           // 引力强度
 const double RG_CONST = 1.2;          // 星球密度，必须大于9/8
 const int MAX_CURV_ITER = 10;         // 计算曲率时的最大迭代次数

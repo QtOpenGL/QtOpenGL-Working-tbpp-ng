@@ -43,16 +43,22 @@ void MainWindow::animate()
         if (backend->paused)
         {
             ui->statusBar->showMessage(
-                QString("模拟已暂停 第 %1 轮，%2 轮/秒，%3 帧/秒")
+                QString(
+                    "模拟已暂停    第 %1 轮，%2 个文明，%3 支舰队    %4 轮/秒，%5 帧/秒")
                     .arg(QString::number(space.clock))
+                    .arg(QString::number(civils.size()))
+                    .arg(QString::number(fleets.size()))
                     .arg(QString::number(backend->fps, 'f', 1))
                     .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
         }
         else
         {
             ui->statusBar->showMessage(
-                QString("正在模拟... 第 %1 轮，%2 轮/秒，%3 帧/秒")
+                QString(
+                    "正在模拟...    第 %1 轮，%2 个文明，%3 支舰队    %4 轮/秒，%5 帧/秒")
                     .arg(QString::number(space.clock))
+                    .arg(QString::number(civils.size()))
+                    .arg(QString::number(fleets.size()))
                     .arg(QString::number(backend->fps, 'f', 1))
                     .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
         }
@@ -60,7 +66,12 @@ void MainWindow::animate()
     else
     {
         ui->statusBar->showMessage(
-            QString("模拟完成，%1 帧/秒")
+            QString(
+                "模拟完成    第 %1 轮，%2 个文明，%3 支舰队    %4 轮/秒，%5 帧/秒")
+                .arg(QString::number(space.clock))
+                .arg(QString::number(civils.size()))
+                .arg(QString::number(fleets.size()))
+                .arg(QString::number(backend->fps, 'f', 1))
                 .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
     }
 }

@@ -51,7 +51,6 @@ class AiDouble
         return AiDouble(n += d);
     }
 };
-
 enum ActType
 {
     ACT_ATK,
@@ -101,6 +100,10 @@ class Civil
     // 已死的文明的好感度不会储存
     static double friendship[MAX_PLANET][MAX_PLANET];
 
+    // 第二层策略参数
+    // 已死的文明的第二层策略参数不会储存
+    static map<int, AiDouble> aiMap[MAX_PLANET];
+
     static void initFriendship();
 
     // 殖民时复制数据
@@ -110,27 +113,38 @@ class Civil
     // civilId为文明编号，即Civil对象在civils中的位置
     // 一个星球可能先后有多个文明，一个文明只对应一个星球
     // parentCivilId == -1表示没有母文明
+    int planetId, civilId, parentCivilId, childCivilCount;
+
+    // 以clock（平直时空中的时间）为单位
     // deathTime == -1表示没有死亡
-    int planetId, civilId, parentCivilId, childCivilCount, birthTime, deathTime;
+    int birthTime, deathTime;
 
-    double tech, timeScale;  // 状态参数
+    // 科技，时间曲率，距离下次执行动作的时间
+    double tech, timeScale, remainTime;
 
-    double rateDev, rateAtk, rateCoop;  // 第一层策略参数
-    map<int, AiDouble> aiMap;           // 第二层策略参数
+    // 第一层策略参数
+    double rateDev, rateAtk, rateCoop;
 
+    // exiFleet[i] == true表示对星球i已经发出舰队
     bool exiFleet[MAX_PLANET];
+
+    // 默认构造函数
+    Civil();
+
     Civil(int _planetId, int _civilId);
 
     void debugPrint();
-    // 根据第二层策略参数修改第一层策略参数
+
+    // 根据第二层策略参数调节第一层策略参数
     double aiMix(int mainKey, initializer_list<double> list);
-    // 将rate...的绝对值归一化，防止过大
+
+    // 将第一层策略参数归一化，防止过大
     void normalizeRate();
 
     void develop();
     void detect(Planet& targetPlanet);
-
     void action();
+
     void mutate();
     // 平凡的进化策略，用于与厉害的进化策略对比
     void mutateNaive();
