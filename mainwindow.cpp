@@ -5,13 +5,16 @@
 #include "ui_mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
+    : QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      fileName("autosave/auto.sav"),
+      lastAutoSaveTime(0)
 {
     ui->setupUi(this);
     setWindowFlags(Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
     setFixedSize(width(), height());
     connect(ui->myOpenGLWidget, &MyOpenGLWidget::msg, this,
-            &MainWindow::receiveMsg);
+            &MainWindow::showMsg);
 
     gTime.start();
 
@@ -19,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     backend->moveToThread(&backendThread);
     connect(this, &MainWindow::backendInit, backend, &Backend::init);
     connect(this, &MainWindow::backendWork, backend, &Backend::work);
-    connect(backend, &Backend::msg, this, &MainWindow::receiveMsg);
+    connect(backend, &Backend::msg, this, &MainWindow::showMsg);
     backendThread.start();
     emit backendInit();
 
@@ -35,48 +38,96 @@ MainWindow::~MainWindow()
     backendThread.wait();
 }
 
+void MainWindow::loadData()
+{
+    showMsg("正在读取星球数据..");
+    deserializeArray((fileName + ".planets").toLocal8Bit().data(), planets,
+                     MAX_PLANET, sizeof(Planet));
+    showMsg("正在读取空间数据..");
+    deserialize((fileName + ".space").toLocal8Bit().data(), space);
+    showMsg("正在读取文明数据..");
+    deserializeList((fileName + ".civils").toLocal8Bit().data(), civils);
+    showMsg("正在读取舰队数据..");
+    deserializeList((fileName + ".fleets").toLocal8Bit().data(), fleets);
+    showMsg("正在读取外交数据..");
+    deserializeArray((fileName + ".friendship").toLocal8Bit().data(),
+                     Civil::friendship, MAX_PLANET * MAX_PLANET,
+                     sizeof(double));
+    showMsg("正在读取策略数据..");
+    deserializeMapArray((fileName + ".aimap").toLocal8Bit().data(),
+                        Civil::aiMap, MAX_PLANET);
+    showMsg("读取数据完成");
+}
+
+void MainWindow::saveData()
+{
+    showMsg("正在写入星球数据..");
+    serializeArray((fileName + ".planets").toLocal8Bit().data(), planets,
+                   MAX_PLANET, sizeof(Planet));
+    showMsg("正在写入空间数据..");
+    serialize((fileName + ".space").toLocal8Bit().data(), space);
+    showMsg("正在写入文明数据..");
+    serializeList((fileName + ".civils").toLocal8Bit().data(), civils);
+    showMsg("正在写入舰队数据..");
+    serializeList((fileName + ".fleets").toLocal8Bit().data(), fleets);
+    showMsg("正在写入外交数据..");
+    serializeArray((fileName + ".friendship").toLocal8Bit().data(),
+                   Civil::friendship, MAX_PLANET * MAX_PLANET, sizeof(double));
+    showMsg("正在写入策略数据..");
+    serializeMapArray((fileName + ".aimap").toLocal8Bit().data(), Civil::aiMap,
+                      MAX_PLANET);
+    showMsg("写入数据完成");
+}
+
 void MainWindow::animate()
 {
+    if (ui->myOpenGLWidget->paused) return;
+
     ui->myOpenGLWidget->animate();
+
+    QString status;
     if (space.clock < MAX_CLOCK)
     {
         if (backend->paused)
-        {
-            ui->statusBar->showMessage(
-                QString(
-                    "模拟已暂停    第 %1 轮，%2 个文明，%3 支舰队    %4 轮/秒，%5 帧/秒")
-                    .arg(QString::number(space.clock))
-                    .arg(QString::number(civils.size()))
-                    .arg(QString::number(fleets.size()))
-                    .arg(QString::number(backend->fps, 'f', 1))
-                    .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
-        }
+            status = "模拟已暂停";
         else
-        {
-            ui->statusBar->showMessage(
-                QString(
-                    "正在模拟...    第 %1 轮，%2 个文明，%3 支舰队    %4 轮/秒，%5 帧/秒")
-                    .arg(QString::number(space.clock))
-                    .arg(QString::number(civils.size()))
-                    .arg(QString::number(fleets.size()))
-                    .arg(QString::number(backend->fps, 'f', 1))
-                    .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
-        }
+            status = "正在模拟...";
     }
     else
+        status = "模拟完成";
+
+    ui->statusBar->showMessage(
+        QString("%1    第 %2 轮，%3 个文明，%4 支舰队    %5 轮/秒，%6 帧/秒")
+            .arg(status)
+            .arg(QString::number(space.clock))
+            .arg(QString::number(civils.size()))
+            .arg(QString::number(fleets.size()))
+            .arg(QString::number(backend->fps, 'f', 1))
+            .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
+
+    // 自动保存
+    if (!backend->paused)
     {
-        ui->statusBar->showMessage(
-            QString(
-                "模拟完成    第 %1 轮，%2 个文明，%3 支舰队    %4 轮/秒，%5 帧/秒")
-                .arg(QString::number(space.clock))
-                .arg(QString::number(civils.size()))
-                .arg(QString::number(fleets.size()))
-                .arg(QString::number(backend->fps, 'f', 1))
-                .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
+        int nowAutoSaveTime = gTime.elapsed();
+        if (nowAutoSaveTime - lastAutoSaveTime > AUTO_SAVE_INTERVAL)
+        {
+            ui->myOpenGLWidget->paused = true;
+            backend->lock();
+            // 写入用于标记存档位置的文件
+            QFile file(fileName);
+            if (file.open(QIODevice::WriteOnly))
+            {
+                file.close();
+                saveData();
+            }
+            backend->unlock();
+            ui->myOpenGLWidget->paused = false;
+            lastAutoSaveTime = nowAutoSaveTime;
+        }
     }
 }
 
-void MainWindow::receiveMsg(QString s)
+void MainWindow::showMsg(QString s)
 {
     ui->statusBar->showMessage(s);
     if (s == "后端初始化完成")
@@ -109,21 +160,7 @@ void MainWindow::on_actionOpen_triggered()
         else
         {
             file.close();
-            receiveMsg("正在读取星球数据..");
-            deserializeArrayFromFile(
-                (fileName + ".planets").toLocal8Bit().data(), planets,
-                MAX_PLANET, sizeof(Planet));
-            receiveMsg("正在读取空间数据..");
-            deserializeFromFile((fileName + ".space").toLocal8Bit().data(),
-                                space);
-            receiveMsg("正在读取舰队数据..");
-            deserializeListFromFile((fileName + ".fleets").toLocal8Bit().data(),
-                                    fleets);
-            receiveMsg("正在读取外交数据..");
-            deserializeArrayFromFile(
-                (fileName + ".friendship").toLocal8Bit().data(),
-                Civil::friendship, MAX_PLANET * MAX_PLANET, sizeof(double));
-            receiveMsg("读取数据完成");
+            loadData();
         }
     }
     backend->unlock();
@@ -149,19 +186,7 @@ void MainWindow::on_actionSave_triggered(bool saveAs)
         else
         {
             file.close();
-            receiveMsg("正在写入星球数据..");
-            serializeArrayToFile((fileName + ".planets").toLocal8Bit().data(),
-                                 planets, MAX_PLANET, sizeof(Planet));
-            receiveMsg("正在写入空间数据..");
-            serializeToFile((fileName + ".space").toLocal8Bit().data(), space);
-            receiveMsg("正在写入舰队数据..");
-            serializeListToFile((fileName + ".fleets").toLocal8Bit().data(),
-                                fleets);
-            receiveMsg("正在写入外交数据..");
-            serializeArrayToFile(
-                (fileName + ".friendship").toLocal8Bit().data(),
-                Civil::friendship, MAX_PLANET * MAX_PLANET, sizeof(double));
-            receiveMsg("写入数据完成");
+            saveData();
         }
     }
     backend->unlock();
@@ -186,7 +211,6 @@ void MainWindow::on_actionReset_triggered()
 void MainWindow::on_actionStat_triggered()
 {
     statWindow.show();
-    statWindow.paintStat();
 }
 
 void MainWindow::on_actionAbout_triggered()

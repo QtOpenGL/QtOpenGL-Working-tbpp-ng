@@ -39,6 +39,7 @@ void Fleet::attack()
     if (1.0 - exp(-initTech / target.tech) > atkChance)
     {
         target.deathTime = space.clock;
+        target.normalizeRate();
 
         // 判定殖民或成为废墟
         double desChance = newRandom.get();
@@ -98,10 +99,11 @@ void Fleet::cooperate()
 
     // 双方科技增加
     double t = initTech / target.tech;
-    civils[fromCivilId].tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
-    // civils[fromCivilId].tech += 2.67 * exp(-0.333 * t) / (t + 1.0 / t);
+    //    civils[fromCivilId].tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
+    civils[fromCivilId].tech += 2.67 * exp(-0.333 * t) / (t + 1.0 / t);
     t = 1.0 / t;
-    target.tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
+    //    target.tech += pow((2.0 * t / (1.0 + pow(t, 4))), 4);
+    target.tech += 2.67 * exp(-0.333 * t) / (t + 1.0 / t);
 }
 
 void Fleet::action()
@@ -405,6 +407,8 @@ void Civil::mutate()
         }
         // 调节策略参数，变化量的数量级与stepCumu相同，方向也偏向stepCumu
         p[i.first] += (newRandom.getNormal() + 0.33) * stepCumu;
+        // 防止过大
+        if (p[i.first] > MAX_AI_MIX) p[i.first] = 0.0;
     }
 }
 
@@ -412,5 +416,10 @@ void Civil::mutateNaive()
 {
     // 随机变异
     auto& p = aiMap[planetId];
-    for (auto i : p) p[i.first] += newRandom.getNormal() * i.second;
+    for (auto i : p)
+    {
+        p[i.first] += newRandom.getNormal() * i.second;
+        // 防止过大
+        if (p[i.first] > MAX_AI_MIX) p[i.first] = 0.0;
+    }
 }

@@ -31,6 +31,7 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     ~MyOpenGLWidget();
 
    private:
+    int retinaScale;
     QPoint lastMousePoint;
     // 星球、线段、发光效果、合成的着色器
     QOpenGLShaderProgram shader, shaderLine, shaderBlur, shaderPost;

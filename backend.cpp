@@ -12,22 +12,19 @@ Backend::Backend()
 
 void Backend::init()
 {
-    emit msg("后端正在初始化...");
-
-    // 初始化星球
+    emit msg("正在初始化星球数据...");
     planets[0] = Planet(0, 0, Point(CENTER_POS, CENTER_POS), 100.0);
     for (int i = 1; i < MAX_PLANET; ++i)
         planets[i] =
-            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 1.0);
+            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
+    emit msg("正在计算时空曲率...");
     space.calcCurv();
+    emit msg("正在计算星球距离...");
     space.calcPlanetDis();
-
-    // 初始化文明
+    emit msg("正在初始化文明数据...");
     for (int i = 0; i < MAX_PLANET; ++i)
         civils.push_back(Civil(civils.size(), civils.size()));
-    // civils[0].tech = 10.0;
     Civil::initFriendship();
-
     emit msg("后端初始化完成");
 }
 

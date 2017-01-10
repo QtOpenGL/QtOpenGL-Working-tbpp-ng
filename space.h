@@ -9,12 +9,12 @@
 
 using namespace std;
 
-const int MAX_PLANET = 500;
+const int MAX_PLANET = 1000;
 const double G_CONST = 0.1;           // 引力强度
 const double RG_CONST = 1.2;          // 星球密度，必须大于9/8
 const int MAX_CURV_ITER = 10;         // 计算曲率时的最大迭代次数
 const double MIN_CURV_MASS = 0.5;     // 计算曲率时考虑的最小质量
-const double MIN_CURV_LOSS = 1.0e-7;  // 计算曲率时允许的误差
+const double MIN_CURV_LOSS = 1.0e-6;  // 计算曲率时允许的误差
 const double MIN_DIS_SEG_LEN = 1.0;   // 计算距离时切分测地线的长度
 const double NEAR_DIS = double(MAX_MESH) * 0.1;  // 用于缓存较近的星球
 
@@ -27,7 +27,7 @@ class Planet : public Point
     int planetId, civilId;
     double mass;
     // 根据星球质量确定半径，用于可视化
-    // 0~100左右的质量对应0.01~0.1左右的半径
+    // 0~100左右的质量对应0.04~0.1左右的半径
     float radius;
 
     bool ruinMark;    // 是否为废墟
@@ -43,7 +43,7 @@ class Planet : public Point
           planetId(_planetId),
           civilId(_civilId),
           mass(_mass),
-          radius(log(log(_mass + 1.0) + 1.0) * 0.02 + 0.002),
+          radius(pow(_mass * 0.01, 0.5) * 0.04 + 0.002),
           ruinMark(false),
           lastTech(0.0)
     {

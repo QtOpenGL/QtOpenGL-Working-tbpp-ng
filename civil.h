@@ -20,7 +20,7 @@ const double TECH_STEP = 10.0;       // 两次技术爆炸之间的科技
 const double TECH_BOOM_RANGE = 1.0;  // 判定技术爆炸时的误差范围
 const double CHILD_CIVIL_FRIENDSHIP = 100.0;
 const double RUIN_TECH_REDUCE = 1.0;  // 废墟造成的技术爆炸随时间减少的速度
-const double MAX_AI_MIX = 1.0e10;
+const double MAX_AI_MIX = 10.0;
 
 // 包装double，使其初始化为一个0.1数量级的随机数
 class AiDouble

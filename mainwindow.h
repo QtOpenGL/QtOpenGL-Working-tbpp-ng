@@ -10,6 +10,8 @@
 #include "backend.h"
 #include "statwindow.h"
 
+const int AUTO_SAVE_INTERVAL = 60000;  // 自动保存的间隔（毫秒）
+
 namespace Ui
 {
     class MainWindow;
@@ -28,12 +30,15 @@ class MainWindow : public QMainWindow
     StatWindow statWindow;
     QThread backendThread;
     QTimer *timer;
-
     QString fileName;  // 当前打开的数据路径
+    int lastAutoSaveTime;
+
+    void loadData();
+    void saveData();
 
    public slots:
     void animate();
-    void receiveMsg(QString s);
+    void showMsg(QString s);
     void on_actionPause_toggled(bool b);        // 开始/暂停模拟
     void on_actionOpen_triggered();             // 打开数据
     void on_actionSave_triggered(bool saveAs);  // 保存数据

@@ -3,9 +3,9 @@
 #ifndef STATWINDOW_H
 #define STATWINDOW_H
 
+#include <QString>
 #include <QVector>
 #include <QWidget>
-#include <cmath>
 #include "civil.h"
 #include "libs/qcustomplot.h"
 
@@ -19,12 +19,17 @@ class StatWindow : public QWidget
     Q_OBJECT
 
    public:
-    explicit StatWindow(QWidget *parent = 0);
+    StatWindow(QWidget *parent = 0);
     ~StatWindow();
-    void paintStat();
 
    private:
     Ui::statWindow *ui;
+    Qt::GlobalColor pointColor;
+
+    void paintStat();
+
+   public slots:
+    void on_pushButton_clicked();
 };
 
 #endif
