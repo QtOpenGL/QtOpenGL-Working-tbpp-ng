@@ -186,7 +186,6 @@ void MyOpenGLWidget::initializeGL()
 void MyOpenGLWidget::paintGL()
 {
     if (paused) return;
-    // cout << "test0" << endl;
 
     backend->lock();
 
@@ -195,13 +194,11 @@ void MyOpenGLWidget::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     shader.bind();
     vertexArray.bind();
-    //    cout << "test1" << endl;
 
     // 确定星球颜色时以科技最高的星球为参考
     double maxTech = 0.0;
     for (int i = 0; i < MAX_PLANET; ++i)
         maxTech = max(maxTech, civils[planets[i].civilId].tech);
-    //    cout << "test2" << endl;
 
     for (int i = 0; i < MAX_PLANET; ++i)
     {
@@ -243,15 +240,12 @@ void MyOpenGLWidget::paintGL()
         drawCircle(drawX, drawY, r, float(tColor.r) / 255.0,
                    float(tColor.g) / 255.0, float(tColor.b) / 255.0);
     }
-    //    cout << "test3" << endl;
 
     vertexArray.release();
     shader.release();
-    // cout << "test4" << endl;
 
     shaderLine.bind();
     vertexArray.bind();
-    // cout << "test5" << endl;
 
     if (selectedPlanetId >= 0)
     {
@@ -265,8 +259,8 @@ void MyOpenGLWidget::paintGL()
         drawCircle(drawX, drawY, r, 1.0, 1.0, 1.0);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        // 绘制选中星球到母星球的线段
         /* DEPRECATED
+        // 绘制选中星球到母星球的线段
         vector<GLfloat> vertices(MAX_PLANET * 3);
         int vertexCount = 0;
         int nowCivilId = planets[selectedPlanetId].civilId;
@@ -289,14 +283,11 @@ void MyOpenGLWidget::paintGL()
         if (vertexCount > 0) drawLine(vertices, vertexCount, 1.0, 1.0, 1.0);
         */
     }
-    // cout << "test6" << endl;
 
     vertexArray.release();
     shaderLine.release();
-    // cout << "test7" << endl;
 
     backend->unlock();
-    // cout << "test8" << endl;
 
     // 在pingpongFrameBuffers中绘制发光效果
     shaderBlur.bind();
@@ -331,7 +322,6 @@ void MyOpenGLWidget::paintGL()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     scrVertexArray.release();
     shaderPost.release();
-    // cout << "test9" << endl;
 }
 
 // 留空

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <list>
 #include <memory>
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -115,6 +116,44 @@ void deserializeList(const char* fileName, vector<T>& objectList)
         objectList.push_back(tObject);
     fclose(fbin);
 }
+
+#ifdef BIGVECTOR_CPP
+// 将BigVector中的对象依次写入文件
+template <typename T>
+void serializeList(const char* fileName, const BigVector<T>& objectList)
+{
+    FILE* fbin = fopen(fileName, "wb");
+    fwrite(addressof(objectList._size), sizeof(objectList._size), 1, fbin);
+    fclose(fbin);
+    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT); ++i)
+    {
+        FILE* fbin =
+            fopen((string(fileName) + "." + to_string(i)).c_str(), "wb");
+        fwrite(objectList.cache[i], sizeof(BigVectorCache<T>), 1, fbin);
+        fclose(fbin);
+    }
+}
+
+// 从文件依次恢复BigVector中的对象
+// 要求T有默认构造函数
+template <typename T>
+void deserializeList(const char* fileName, BigVector<T>& objectList)
+{
+    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT); ++i)
+        delete objectList.cache[i];
+    FILE* fbin = fopen(fileName, "rb");
+    fread(addressof(objectList._size), sizeof(objectList._size), 1, fbin);
+    fclose(fbin);
+    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT); ++i)
+    {
+        objectList.cache[i] = new BigVectorCache<T>;
+        FILE* fbin =
+            fopen((string(fileName) + "." + to_string(i)).c_str(), "rb");
+        fread(objectList.cache[i], sizeof(BigVectorCache<T>), 1, fbin);
+        fclose(fbin);
+    }
+}
+#endif
 
 // 将元素为map的数组写入文件
 // 用于保存aiMap

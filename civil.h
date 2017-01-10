@@ -7,6 +7,7 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include "bigvector.cpp"
 #include "space.h"
 
 using namespace std;
@@ -150,6 +151,10 @@ class Civil
     void mutateNaive();
 };
 
+#ifdef BIGVECTOR_CPP
+extern BigVector<Civil> civils;
+#else
 extern vector<Civil> civils;
+#endif
 
 #endif

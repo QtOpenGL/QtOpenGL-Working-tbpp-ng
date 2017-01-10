@@ -53,8 +53,8 @@ StatWindow::~StatWindow()
 void StatWindow::paintStat()
 {
     // 调节取点的数量和间隔
-    // 取点不超过1000个
-    int maxSample = 1000;
+    // 取点不超过10000个
+    int maxSample = 10000;
     double step;
     if (size_t(maxSample) > civils.size())
     {

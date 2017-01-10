@@ -23,7 +23,10 @@ void Backend::init()
     space.calcPlanetDis();
     emit msg("正在初始化文明数据...");
     for (int i = 0; i < MAX_PLANET; ++i)
-        civils.push_back(Civil(civils.size(), civils.size()));
+    {
+        Civil c(i, i);
+        civils.push_back(c);
+    }
     Civil::initFriendship();
     emit msg("后端初始化完成");
 }

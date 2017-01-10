@@ -8,6 +8,7 @@ TEMPLATE = app
 SOURCES += \
     libs/qcustomplot.cpp \
     backend.cpp \
+    bigvector.cpp \
     civil.cpp \
     color.cpp \
     globaltime.cpp \

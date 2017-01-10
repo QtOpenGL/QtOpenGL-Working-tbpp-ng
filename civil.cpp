@@ -4,7 +4,11 @@
 
 list<Fleet> fleets;
 
+#ifdef BIGVECTOR_CPP
+BigVector<Civil> civils;
+#else
 vector<Civil> civils;
+#endif
 
 double Civil::friendship[MAX_PLANET][MAX_PLANET];
 
@@ -230,6 +234,7 @@ void Civil::normalizeRate()
 void Civil::develop()
 {
     if (PRINT_ACTION) cout << civilId << " develop" << endl;
+    /* DEPRECATED
     // 科技累积到一定程度时触发技术爆炸
     for (int i = 1; i < TECH_LIMIT / TECH_STEP; ++i)
     {
@@ -240,6 +245,7 @@ void Civil::develop()
             return;
         }
     }
+    */
     tech += 1.0;
 }
 
