@@ -220,9 +220,9 @@ void MyOpenGLWidget::paintGL()
         {
             float tFriendship = Civil::friendship[selectedPlanetId][p.planetId];
             if (tFriendship > 0.0)
-                tHue = 0.3 + 0.3 * (1.0 - exp(-1000.0 * tFriendship));
+                tHue = 0.3 + 0.3 * (1.0 - exp(-tFriendship));
             else
-                tHue = 0.3 * exp(1000.0 * tFriendship);
+                tHue = 0.3 * exp(tFriendship);
         }
         else
         {
