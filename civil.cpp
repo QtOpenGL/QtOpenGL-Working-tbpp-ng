@@ -67,7 +67,7 @@ void Fleet::attack()
 
         // 判定殖民或成为废墟
         double desChance = newRandom.get();
-        if (exp(-initTech / target.tech) < desChance)
+        if (0.1 * exp(-initTech / target.tech) < desChance)
         {
             // 殖民
             if (PRINT_ACTION)
@@ -243,7 +243,7 @@ double Civil::aiMix(int key, initializer_list<double> list)
         res += p[i] * (*(list.begin() + i));
     res = p[MAX_AI_PARAM];
     // 防止过大
-    if (abs(res) > MAX_AI_MIX) res = 1.0 / MAX_AI_MIX / res;
+    if (abs(res) > MAX_AI_MIX) res = MAX_AI_MIX / res;
     return res;
 }
 
@@ -448,7 +448,7 @@ void Civil::mutate()
             p[i.first][j] += (newRandom.getNormal() + 0.33) * stepCumu;
             // 防止过大
             if (abs(p[i.first][j]) > MAX_AI_MIX)
-                p[i.first][j] = 1.0 / MAX_AI_MIX / p[i.first][j];
+                p[i.first][j] = MAX_AI_MIX / p[i.first][j];
         }
     }
 }
@@ -464,7 +464,7 @@ void Civil::mutateNaive()
             p[i.first][j] += newRandom.getNormal() * p[i.first][j];
             // 防止过大
             if (abs(p[i.first][j]) > MAX_AI_MIX)
-                p[i.first][j] = 1.0 / MAX_AI_MIX / p[i.first][j];
+                p[i.first][j] = MAX_AI_MIX / p[i.first][j];
         }
     }
 }

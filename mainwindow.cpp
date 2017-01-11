@@ -107,6 +107,7 @@ void MainWindow::animate()
             .arg(QString::number(ui->myOpenGLWidget->fps, 'f', 1)));
 
     // 自动保存
+    /*DEPRECATED
     if (!backend->paused)
     {
         int nowAutoSaveTime = gTime.elapsed();
@@ -126,6 +127,7 @@ void MainWindow::animate()
             lastAutoSaveTime = nowAutoSaveTime;
         }
     }
+    */
 }
 
 void MainWindow::showMsg(QString s)
