@@ -4,7 +4,7 @@
 #include "serial.cpp"
 #include "ui_mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
       fileName("autosave/auto.sav"),
@@ -15,6 +15,10 @@ MainWindow::MainWindow(QWidget *parent)
     setFixedSize(width(), height());
     connect(ui->myOpenGLWidget, &MyOpenGLWidget::msg, this,
             &MainWindow::showMsg);
+
+    // 创建自动存档用的文件夹
+    QDir dir("autosave");
+    if (!dir.exists()) dir.mkpath(".");
 
     gTime.start();
 
@@ -143,7 +147,7 @@ void MainWindow::on_actionOpen_triggered()
     ui->myOpenGLWidget->paused = true;
     backend->lock();
     fileName = QFileDialog::getOpenFileName(
-        this, tr("打开"), "", tr("数据存档 (*.sav);;所有文件 (*.*)"));
+        this, tr("打开"), "", tr("二进制格式 (*.sav);;所有文件 (*.*)"));
     if (!fileName.isEmpty())
     {
         // 读取用于标记存档位置的文件
@@ -162,14 +166,14 @@ void MainWindow::on_actionOpen_triggered()
     ui->myOpenGLWidget->paused = false;
 }
 
-void MainWindow::on_actionSave_triggered(bool saveAs)
+void MainWindow::on_actionSave_triggered()
 {
     // 暂停模拟和星图显示
     ui->myOpenGLWidget->paused = true;
     backend->lock();
-    if (fileName.isEmpty() || saveAs)
+    if (fileName.isEmpty())
         fileName = QFileDialog::getSaveFileName(
-            this, tr("保存"), "", tr("数据存档 (*.sav);;所有文件 (*.*)"));
+            this, tr("保存"), "", tr("二进制格式 (*.sav);;所有文件 (*.*)"));
     if (!fileName.isEmpty())
     {
         // 写入用于标记存档位置的文件
@@ -190,7 +194,139 @@ void MainWindow::on_actionSave_triggered(bool saveAs)
 
 void MainWindow::on_actionSaveAs_triggered()
 {
-    on_actionSave_triggered(true);
+    // 暂停模拟和星图显示
+    ui->myOpenGLWidget->paused = true;
+    backend->lock();
+    // 无论是否设置过fileName，都要重新设置
+    fileName = QFileDialog::getSaveFileName(
+        this, tr("另存为"), "", tr("二进制格式 (*.sav);;所有文件 (*.*)"));
+    if (!fileName.isEmpty())
+    {
+        // 写入用于标记存档位置的文件
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly))
+        {
+            QMessageBox::critical(this, tr("错误"), tr("保存文件失败"));
+        }
+        else
+        {
+            file.close();
+            saveData();
+        }
+    }
+    backend->unlock();
+    ui->myOpenGLWidget->paused = false;
+}
+
+void MainWindow::on_actionImportStg_triggered()
+{
+    // 暂停模拟和星图显示
+    ui->myOpenGLWidget->paused = true;
+    backend->lock();
+    QString tmpFileName = QFileDialog::getOpenFileName(
+        this, tr("导入策略参数"), "", tr("JSON格式 (*.json);;所有文件 (*.*)"));
+    if (!tmpFileName.isEmpty())
+    {
+        ifstream in(tmpFileName.toLocal8Bit().data(), fstream::in);
+        if (!in)
+        {
+            QMessageBox::critical(this, tr("错误"), tr("打开文件失败"));
+        }
+        else
+        {
+            string str, chunk;
+            str = "";
+            while (!in.eof())
+            {
+                getline(in, chunk);
+                str += chunk;
+            }
+            in.close();
+
+            Json::Reader reader;
+            Json::Value js;
+            reader.parse(str, js);
+
+            for (int i = 0; i < MAX_PLANET; ++i)
+            {
+                Civil& c = civils[planets[i].civilId];
+                c.rateDev = js[i]["rateDev"].asDouble();
+                c.rateAtk = js[i]["rateAtk"].asDouble();
+                c.rateCoop = js[i]["rateCoop"].asDouble();
+                for (auto j : Civil::aiMap[i])
+                    for (int k = 0; k < MAX_AI_PARAM + 1; ++k)
+                        Civil::aiMap[i][j.first][k] =
+                            js[i][to_string(j.first)][k].asDouble();
+            }
+        }
+    }
+    backend->unlock();
+    ui->myOpenGLWidget->paused = false;
+}
+
+void MainWindow::on_actionExportStg_triggered()
+{
+    // 暂停模拟和星图显示
+    ui->myOpenGLWidget->paused = true;
+    backend->lock();
+    QString tmpFileName = QFileDialog::getSaveFileName(
+        this, tr("导出策略参数"), "", tr("JSON格式 (*.json);;所有文件 (*.*)"));
+    if (!tmpFileName.isEmpty())
+    {
+        ofstream out(tmpFileName.toLocal8Bit().data(), fstream::out);
+        if (!out)
+        {
+            QMessageBox::critical(this, tr("错误"), tr("保存文件失败"));
+        }
+        else
+        {
+            Json::Value js;
+            for (int i = 0; i < MAX_PLANET; ++i)
+            {
+                Civil& c = civils[planets[i].civilId];
+                js[i]["rateDev"] = c.rateDev;
+                js[i]["rateAtk"] = c.rateAtk;
+                js[i]["rateCoop"] = c.rateCoop;
+                for (auto j : Civil::aiMap[i])
+                    for (int k = 0; k < MAX_AI_PARAM + 1; ++k)
+                        js[i][to_string(j.first)][k] =
+                            Civil::aiMap[i][j.first][k];
+            }
+
+            Json::StreamWriterBuilder builder;
+            builder["commentStyle"] = "None";
+            builder["indentation"] = "";
+            builder["precision"] = 3;
+            auto writer(builder.newStreamWriter());
+            writer->write(js, &out);
+            out.close();
+        }
+    }
+    backend->unlock();
+    ui->myOpenGLWidget->paused = false;
+}
+
+void MainWindow::on_actionSpot_triggered()
+{
+    if (ui->myOpenGLWidget->selectedPlanetId >= 0)
+    {
+        Planet& p = planets[ui->myOpenGLWidget->selectedPlanetId];
+        ui->myOpenGLWidget->xPos = -(ui->myOpenGLWidget->planetToDrawPos(p.x));
+        ui->myOpenGLWidget->yPos = -(ui->myOpenGLWidget->planetToDrawPos(p.y));
+        ui->myOpenGLWidget->xSpd = 0.0;
+        ui->myOpenGLWidget->ySpd = 0.0;
+        ui->myOpenGLWidget->zSpd = 0.0;
+    }
+}
+
+void MainWindow::on_actionReset_triggered()
+{
+    ui->myOpenGLWidget->xPos = 0.0;
+    ui->myOpenGLWidget->yPos = 0.0;
+    ui->myOpenGLWidget->zPos = 0.0;
+    ui->myOpenGLWidget->xSpd = 0.0;
+    ui->myOpenGLWidget->ySpd = 0.0;
+    ui->myOpenGLWidget->zSpd = 0.0;
 }
 
 void MainWindow::on_actionPause_toggled(bool b)
@@ -216,16 +352,6 @@ void MainWindow::on_actionShowParent_toggled(bool b)
 void MainWindow::on_actionShowFleet_toggled(bool b)
 {
     ui->myOpenGLWidget->showFleet = b;
-}
-
-void MainWindow::on_actionReset_triggered()
-{
-    ui->myOpenGLWidget->xPos = 0.0;
-    ui->myOpenGLWidget->yPos = 0.0;
-    ui->myOpenGLWidget->zPos = 0.0;
-    ui->myOpenGLWidget->xSpd = 0.0;
-    ui->myOpenGLWidget->ySpd = 0.0;
-    ui->myOpenGLWidget->zSpd = 0.0;
 }
 
 void MainWindow::on_actionStat_triggered()

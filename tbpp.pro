@@ -6,6 +6,7 @@ TARGET = tbpp
 TEMPLATE = app
 
 SOURCES += \
+    libs/jsoncpp.cpp \
     libs/qcustomplot.cpp \
     backend.cpp \
     bigvector.cpp \
@@ -22,6 +23,7 @@ SOURCES += \
     utils.cpp \
 
 HEADERS += \
+    libs/jsoncpp.h \
     libs/qcustomplot.h \
     backend.h \
     civil.h \

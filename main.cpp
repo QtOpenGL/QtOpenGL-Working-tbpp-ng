@@ -1,14 +1,30 @@
+#include <fstream>
 #include "civil.h"
 
 const int MAX_MAIN_LOOP = 100;
 
 int main()
 {
-    // 初始化星球
-    planets[0] = Planet(0, 0, Point(CENTER_POS, CENTER_POS), 100.0);
-    for (int i = 1; i < MAX_PLANET; ++i)
+    // 从文件读取星球
+    int inPlanetCount = 0;
+    ifstream in("in.txt", fstream::in);
+    if (in)
+    {
+        while (!in.eof())
+        {
+            double x, y, mass;
+            in >> x >> y >> mass;
+            planets[inPlanetCount] =
+                Planet(inPlanetCount, inPlanetCount, Point(x, y), mass);
+            ++inPlanetCount;
+        }
+        in.close();
+    }
+
+    // 随机初始化剩余星球
+    for (int i = inPlanetCount; i < MAX_PLANET; ++i)
         planets[i] =
-            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 1.0);
+            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
     space.calcCurv();
     space.calcPlanetDis();
 

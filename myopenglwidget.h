@@ -30,6 +30,9 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     MyOpenGLWidget(QWidget *parent = 0);
     ~MyOpenGLWidget();
 
+    float planetToDrawPos(float x);
+    float drawToPlanetPos(float x);
+
    private:
     int retinaScale;
     QPoint lastMousePoint;
@@ -60,9 +63,6 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void wheelEvent(QWheelEvent *event);
-
-    float planetToDrawPos(float x);
-    float drawToPlanetPos(float x);
 
    public slots:
     void animate();

@@ -243,7 +243,7 @@ double Civil::aiMix(int key, initializer_list<double> list)
         res += p[i] * (*(list.begin() + i));
     res = p[MAX_AI_PARAM];
     // 防止过大
-    if (res > MAX_AI_MIX) res = 0.0;
+    if (abs(res) > MAX_AI_MIX) res = 1.0 / MAX_AI_MIX / res;
     return res;
 }
 
@@ -447,7 +447,7 @@ void Civil::mutate()
             // 调节策略参数，变化量的数量级与stepCumu相同，方向也偏向stepCumu
             p[i.first][j] += (newRandom.getNormal() + 0.33) * stepCumu;
             // 防止过大
-            if (p[i.first][j] > MAX_AI_MIX)
+            if (abs(p[i.first][j]) > MAX_AI_MIX)
                 p[i.first][j] = 1.0 / MAX_AI_MIX / p[i.first][j];
         }
     }
@@ -463,7 +463,7 @@ void Civil::mutateNaive()
         {
             p[i.first][j] += newRandom.getNormal() * p[i.first][j];
             // 防止过大
-            if (p[i.first][j] > MAX_AI_MIX)
+            if (abs(p[i.first][j]) > MAX_AI_MIX)
                 p[i.first][j] = 1.0 / MAX_AI_MIX / p[i.first][j];
         }
     }

@@ -17,10 +17,23 @@ Backend::Backend()
 
 void Backend::init()
 {
+    emit msg("正在读取星球数据...");
+    int inPlanetCount = 0;
+    ifstream in("in.txt", fstream::in);
+    if (in)
+    {
+        while (!in.eof())
+        {
+            double x, y, mass;
+            in >> x >> y >> mass;
+            planets[inPlanetCount] =
+                Planet(inPlanetCount, inPlanetCount, Point(x, y), mass);
+            ++inPlanetCount;
+        }
+        in.close();
+    }
     emit msg("正在初始化星球数据...");
-    planets[0] = Planet(0, 0, Point(30.0, 50.0), 100.0);
-    planets[1] = Planet(1, 1, Point(70.0, 50.0), 100.0);
-    for (int i = 2; i < MAX_PLANET; ++i)
+    for (int i = inPlanetCount; i < MAX_PLANET; ++i)
         planets[i] =
             Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
     emit msg("正在计算时空曲率...");
