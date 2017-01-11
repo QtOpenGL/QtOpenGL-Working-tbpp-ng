@@ -21,37 +21,29 @@ const double TECH_STEP = 10.0;       // 两次技术爆炸之间的科技
 const double TECH_BOOM_RANGE = 1.0;  // 判定技术爆炸时的误差范围
 const double CHILD_CIVIL_FRIENDSHIP = 100.0;
 const double RUIN_TECH_REDUCE = 1.0;  // 废墟造成的技术爆炸随时间减少的速度
-const double MAX_AI_MIX = 10.0;
 
-// 包装double，使其初始化为一个0.1数量级的随机数
-class AiDouble
+const double MAX_AI_MIX = 10.0;
+const int MAX_AI_PARAM = 8;
+const double MAX_INIT_AI_PARAM = 0.1;
+
+// aiMap一次取出的参数
+class AiParams
 {
    public:
-    double n;
+    double n[MAX_AI_PARAM + 1];
 
-    AiDouble() : n(newRandom.getNormal() * 0.1)
+    AiParams()
     {
+        for (int i = 0; i < MAX_AI_PARAM + 1; ++i)
+            n[i] = newRandom.getNormal() * MAX_INIT_AI_PARAM;
     }
 
-    AiDouble(double _n) : n(_n)
+    double& operator[](int i)
     {
-    }
-
-    operator double()
-    {
-        return n;
-    }
-
-    AiDouble operator*(double d)
-    {
-        return AiDouble(n * d);
-    }
-
-    AiDouble operator+=(double d)
-    {
-        return AiDouble(n += d);
+        return n[i];
     }
 };
+
 enum ActType
 {
     ACT_ATK,
@@ -67,23 +59,9 @@ class Fleet
     bool deleteLater;
 
     // 默认构造函数
-    Fleet()
-    {
-    }
-
+    Fleet();
     Fleet(int _fromCivilId, int _targetPlanetId, ActType _actType,
-          double _initDis, double _initTech)
-        : fromCivilId(_fromCivilId),
-          targetPlanetId(_targetPlanetId),
-          initTime(space.clock),
-          actType(_actType),
-          initDis(_initDis),
-          remainDis(_initDis),
-          initTech(_initTech),
-          deleteLater(false)
-    {
-    }
-
+          double _initDis, double _initTech);
     void debugPrint();
     void attack();
     void cooperate();
@@ -96,14 +74,14 @@ extern list<Fleet> fleets;
 class Civil
 {
    public:
-    // friendship[a][b]表示星球a对星球b的好感度
-    // 星球上的文明改变时好感度需要重置
-    // 已死的文明的好感度不会储存
+    // friendship[a][b]描述星球a对星球b的外交情况
+    // 星球上的文明改变时外交参数需要重置
+    // 已死文明的外交参数不会储存
     static double friendship[MAX_PLANET][MAX_PLANET];
 
     // 第二层策略参数
-    // 已死的文明的第二层策略参数不会储存
-    static map<int, AiDouble> aiMap[MAX_PLANET];
+    // 已死文明的第二层策略参数不会储存
+    static map<int, AiParams> aiMap[MAX_PLANET];
 
     static void initFriendship();
 
@@ -114,7 +92,7 @@ class Civil
     // civilId为文明编号，即Civil对象在civils中的位置
     // 一个星球可能先后有多个文明，一个文明只对应一个星球
     // parentCivilId == -1表示没有母文明
-    int planetId, civilId, parentCivilId, childCivilCount;
+    int planetId, civilId, parentCivilId;
 
     // 以clock（平直时空中的时间）为单位
     // deathTime == -1表示没有死亡
@@ -129,6 +107,9 @@ class Civil
     // exiFleet[i] == true表示对星球i已经发出舰队
     bool exiFleet[MAX_PLANET];
 
+    // 统计指标
+    int childCivilCount, devCount, atkCount, coopCount;
+
     // 默认构造函数
     Civil();
 
@@ -137,7 +118,7 @@ class Civil
     void debugPrint();
 
     // 根据第二层策略参数调节第一层策略参数
-    double aiMix(int mainKey, initializer_list<double> list);
+    double aiMix(int key, initializer_list<double> list);
 
     // 将第一层策略参数归一化，防止过大
     void normalizeRate();

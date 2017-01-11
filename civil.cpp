@@ -12,7 +12,24 @@ vector<Civil> civils;
 
 double Civil::friendship[MAX_PLANET][MAX_PLANET];
 
-map<int, AiDouble> Civil::aiMap[MAX_PLANET];
+map<int, AiParams> Civil::aiMap[MAX_PLANET];
+
+Fleet::Fleet()
+{
+}
+
+Fleet::Fleet(int _fromCivilId, int _targetPlanetId, ActType _actType,
+             double _initDis, double _initTech)
+    : fromCivilId(_fromCivilId),
+      targetPlanetId(_targetPlanetId),
+      initTime(space.clock),
+      actType(_actType),
+      initDis(_initDis),
+      remainDis(_initDis),
+      initTech(_initTech),
+      deleteLater(false)
+{
+}
 
 void Fleet::debugPrint()
 {
@@ -26,12 +43,15 @@ void Fleet::attack()
     Planet& targetPlanet = planets[targetPlanetId];
     Civil& target = civils[targetPlanet.civilId];
 
-// 对方的第一层策略参数和好感度变化
-#define tempMacro(a)                                                \
-    a += civils[fromCivilId].aiMix(                                 \
-        __LINE__, {target.rateDev, target.rateAtk, target.rateCoop, \
-                   target.tech / civils[fromCivilId].tech,          \
-                   target.timeScale / civils[fromCivilId].timeScale})
+// 对方的第一层策略参数和外交参数变化
+#define tempMacro(a)                                                      \
+    a += civils[fromCivilId].aiMix(                                       \
+        __LINE__,                                                         \
+        {target.rateDev, target.rateAtk, target.rateCoop,                 \
+         Civil::friendship[targetPlanetId][civils[fromCivilId].planetId], \
+         target.tech / civils[fromCivilId].tech,                          \
+         target.timeScale / civils[fromCivilId].timeScale,                \
+         space.getDis(targetPlanetId, civils[fromCivilId].planetId)})
     tempMacro(target.rateDev);
     tempMacro(target.rateAtk);
     tempMacro(target.rateCoop);
@@ -75,7 +95,7 @@ void Fleet::attack()
             Civil& newCivil = civils[civils.size() - 1];
             targetPlanet.civilId = newCivil.civilId;
 
-            // 重置好感度
+            // 重置外交参数
             for (int i = 0; i < MAX_PLANET; ++i)
             {
                 Civil::friendship[targetPlanetId][i] = 0.0;
@@ -89,12 +109,15 @@ void Fleet::cooperate()
 {
     Civil& target = civils[planets[targetPlanetId].civilId];
 
-// 对方的第一层策略参数和好感度变化
-#define tempMacro(a)                                                \
-    a += civils[fromCivilId].aiMix(                                 \
-        __LINE__, {target.rateDev, target.rateAtk, target.rateCoop, \
-                   target.tech / civils[fromCivilId].tech,          \
-                   target.timeScale / civils[fromCivilId].timeScale})
+// 对方的第一层策略参数和外交参数变化
+#define tempMacro(a)                                                      \
+    a += civils[fromCivilId].aiMix(                                       \
+        __LINE__,                                                         \
+        {target.rateDev, target.rateAtk, target.rateCoop,                 \
+         Civil::friendship[targetPlanetId][civils[fromCivilId].planetId], \
+         target.tech / civils[fromCivilId].tech,                          \
+         target.timeScale / civils[fromCivilId].timeScale,                \
+         space.getDis(targetPlanetId, civils[fromCivilId].planetId)})
     tempMacro(target.rateDev);
     tempMacro(target.rateAtk);
     tempMacro(target.rateCoop);
@@ -154,13 +177,13 @@ void Civil::colonize(Civil& oldCivil, Civil& newCivil)
 #undef copyData
     aiMap[newCivil.planetId] = aiMap[oldCivil.planetId];
 
-    // 复制自己对其他星球的好感度，其他星球对自己的好感度
+    // 复制自己对其他星球的外交参数，其他星球对自己的外交参数
     for (int i = 0; i < MAX_PLANET; ++i)
     {
         friendship[newCivil.planetId][i] = friendship[oldCivil.planetId][i];
         friendship[i][newCivil.planetId] = friendship[i][oldCivil.planetId];
     }
-    // 自己与子文明好感度很高
+    // 标记自己与子文明的外交参数
     friendship[oldCivil.planetId][newCivil.planetId] = CHILD_CIVIL_FRIENDSHIP;
     friendship[newCivil.planetId][oldCivil.planetId] = CHILD_CIVIL_FRIENDSHIP;
 }
@@ -174,7 +197,6 @@ Civil::Civil(int _planetId, int _civilId)
     : planetId(_planetId),
       civilId(_civilId),
       parentCivilId(-1),
-      childCivilCount(0),
       birthTime(space.clock),
       deathTime(-1),
       tech(newRandom.get() * MAX_INIT_TECH),
@@ -182,7 +204,11 @@ Civil::Civil(int _planetId, int _civilId)
       remainTime(timeScale),
       rateDev(newRandom.get()),
       rateAtk(newRandom.get()),
-      rateCoop(newRandom.get())
+      rateCoop(newRandom.get()),
+      childCivilCount(0),
+      devCount(0),
+      atkCount(0),
+      coopCount(0)
 {
     for (int i = 0; i < MAX_PLANET; ++i) exiFleet[i] = false;
 }
@@ -193,12 +219,12 @@ void Civil::debugPrint()
     {
         cout << planetId << " " << planets[planetId].x << " "
              << planets[planetId].y << " " << planets[planetId].mass << endl;
-        cout << civilId << " " << parentCivilId << " " << childCivilCount
-             << endl;
-        cout << birthTime << " " << deathTime << " " << space.clock - birthTime
-             << endl;
+        cout << civilId << " " << parentCivilId << " " << birthTime << " "
+             << deathTime << " " << space.clock - birthTime << endl;
         cout << tech << " " << timeScale << " " << remainTime << endl;
         cout << rateDev << " " << rateAtk << " " << rateCoop << endl;
+        cout << childCivilCount << " " << devCount << " " << atkCount << " "
+             << coopCount << endl;
         cout << endl;
     }
     else
@@ -208,16 +234,14 @@ void Civil::debugPrint()
     }
 }
 
-double Civil::aiMix(int mainKey, initializer_list<double> list)
+// 参数不能超过MAX_AI_PARAM个
+double Civil::aiMix(int key, initializer_list<double> list)
 {
-    auto& p = aiMap[planetId];
-    int key = mainKey << 16;
-    double res = p[key];
+    auto& p = aiMap[planetId][key];
+    double res = 0.0;
     for (size_t i = 0; i < list.size(); ++i)
-    {
-        key = mainKey << 16 & 1 << 8 & i;
-        res += p[key] * (*(list.begin() + i));
-    }
+        res += p[i] * (*(list.begin() + i));
+    res = p[MAX_AI_PARAM];
     // 防止过大
     if (res > MAX_AI_MIX) res = 0.0;
     return res;
@@ -292,22 +316,21 @@ void Civil::action()
             continue;
         }
         actProb[i + 1] = exp(
-            aiMix(__LINE__,
-                  {rateAtk, civils[planets[i].civilId].tech / tech,
-                   space.getDis(planetId, i), 1.0 / space.getDis(planetId, i),
-                   friendship[planetId][i]}));
+            aiMix(__LINE__, {rateAtk, friendship[planetId][i],
+                             tech / civils[planets[i].civilId].tech,
+                             timeScale / civils[planets[i].civilId].timeScale,
+                             space.getDis(planetId, i)}));
         actProb[i + MAX_PLANET + 1] = exp(
-            aiMix(__LINE__,
-                  {rateCoop, civils[planets[i].civilId].tech / tech,
-                   space.getDis(planetId, i), 1.0 / space.getDis(planetId, i),
-                   friendship[planetId][i]}));
+            aiMix(__LINE__, {rateCoop, friendship[planetId][i],
+                             tech / civils[planets[i].civilId].tech,
+                             timeScale / civils[planets[i].civilId].timeScale,
+                             space.getDis(planetId, i)}));
         sum += actProb[i + 1] + actProb[i + MAX_PLANET + 1];
     }
 
     // 将概率归一化
     double invSum = 1.0 / sum;
     for (int i = 0; i < actCount; ++i) actProb[i] *= invSum;
-
     double choice = newRandom.get();
     int choiceIndex = 0;
     double sumProb = 0.0;
@@ -333,6 +356,7 @@ void Civil::action()
         tempMacro(rateCoop);
 #undef tempMacro
         develop();
+        ++devCount;
     }
     else if (choiceIndex <= MAX_PLANET)
     {
@@ -341,10 +365,12 @@ void Civil::action()
         Planet& p = planets[choiceIndex];
 // 第一层策略参数变化
 // 用行号确定需要的第二层策略参数
-#define tempMacro(a)                                                       \
-    a += aiMix(__LINE__,                                                   \
-               {rateDev, rateAtk, rateCoop, tech / civils[p.civilId].tech, \
-                timeScale / civils[p.civilId].timeScale})
+#define tempMacro(a)                                                          \
+    a += aiMix(__LINE__,                                                      \
+               {rateDev, rateAtk, rateCoop, friendship[planetId][p.planetId], \
+                tech / civils[p.civilId].tech,                                \
+                timeScale / civils[p.civilId].timeScale,                      \
+                space.getDis(planetId, p.planetId)})
         tempMacro(rateDev);
         tempMacro(rateAtk);
         tempMacro(rateCoop);
@@ -355,6 +381,7 @@ void Civil::action()
         if (PRINT_ACTION)
             cout << civilId << " begin attack " << p.planetId << endl;
         exiFleet[p.planetId] = true;
+        ++atkCount;
     }
     else
     {
@@ -363,10 +390,12 @@ void Civil::action()
         Planet& p = planets[choiceIndex];
 // 第一层策略参数变化
 // 用行号确定需要的第二层策略参数
-#define tempMacro(a)                                                       \
-    a += aiMix(__LINE__,                                                   \
-               {rateDev, rateAtk, rateCoop, tech / civils[p.civilId].tech, \
-                timeScale / civils[p.civilId].timeScale})
+#define tempMacro(a)                                                          \
+    a += aiMix(__LINE__,                                                      \
+               {rateDev, rateAtk, rateCoop, friendship[planetId][p.planetId], \
+                tech / civils[p.civilId].tech,                                \
+                timeScale / civils[p.civilId].timeScale,                      \
+                space.getDis(planetId, p.planetId)})
         tempMacro(rateDev);
         tempMacro(rateAtk);
         tempMacro(rateCoop);
@@ -377,6 +406,7 @@ void Civil::action()
         if (PRINT_ACTION)
             cout << civilId << " begin cooperate " << p.planetId << endl;
         exiFleet[p.planetId] = true;
+        ++coopCount;
     }
 }
 
@@ -401,20 +431,25 @@ void Civil::mutate()
     auto& p = aiMap[planetId];
     for (auto i : p)
     {
-        // stepCumu是各代母文明的策略参数变化量，按指数衰减加权平均的结果
-        // 之前的变异往策略参数较好的方向进行，所以之后的变异也要往这个方向进行
-        // 同时要有一定随机性
-        double stepCumu = 1.0;
-        for (int j = 0; j < parentCount - 1; ++j)
+        for (int j = 0; j < MAX_AI_PARAM + 1; ++j)
         {
-            stepCumu = stepCumu * STEP_WEIGHT_REDUCE +
-                       aiMap[civils[parentIdList[j]].planetId][i.first] -
-                       aiMap[civils[parentIdList[j + 1]].planetId][i.first];
+            // stepCumu是各代母文明的策略参数变化量，按指数衰减加权平均的结果
+            // 之前的变异往策略参数较好的方向进行，所以之后的变异也要往这个方向进行
+            // 同时要有一定随机性
+            double stepCumu = 1.0;
+            for (int k = 0; k < parentCount - 1; ++k)
+            {
+                stepCumu =
+                    stepCumu * STEP_WEIGHT_REDUCE +
+                    aiMap[civils[parentIdList[k]].planetId][i.first][j] -
+                    aiMap[civils[parentIdList[k + 1]].planetId][i.first][j];
+            }
+            // 调节策略参数，变化量的数量级与stepCumu相同，方向也偏向stepCumu
+            p[i.first][j] += (newRandom.getNormal() + 0.33) * stepCumu;
+            // 防止过大
+            if (p[i.first][j] > MAX_AI_MIX)
+                p[i.first][j] = 1.0 / MAX_AI_MIX / p[i.first][j];
         }
-        // 调节策略参数，变化量的数量级与stepCumu相同，方向也偏向stepCumu
-        p[i.first] += (newRandom.getNormal() + 0.33) * stepCumu;
-        // 防止过大
-        if (p[i.first] > MAX_AI_MIX) p[i.first] = 0.0;
     }
 }
 
@@ -424,8 +459,12 @@ void Civil::mutateNaive()
     auto& p = aiMap[planetId];
     for (auto i : p)
     {
-        p[i.first] += newRandom.getNormal() * i.second;
-        // 防止过大
-        if (p[i.first] > MAX_AI_MIX) p[i.first] = 0.0;
+        for (int j = 0; j < MAX_AI_PARAM + 1; ++j)
+        {
+            p[i.first][j] += newRandom.getNormal() * p[i.first][j];
+            // 防止过大
+            if (p[i.first][j] > MAX_AI_MIX)
+                p[i.first][j] = 1.0 / MAX_AI_MIX / p[i.first][j];
+        }
     }
 }

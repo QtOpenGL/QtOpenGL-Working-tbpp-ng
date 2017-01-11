@@ -13,10 +13,11 @@ const int MAX_PLANET = 1000;
 const double G_CONST = 0.1;           // 引力强度
 const double RG_CONST = 1.2;          // 星球密度，必须大于9/8
 const int MAX_CURV_ITER = 10;         // 计算曲率时的最大迭代次数
-const double MIN_CURV_MASS = 0.5;     // 计算曲率时考虑的最小质量
+const double MIN_CURV_MASS = 1.0;     // 计算曲率时考虑的最小质量
 const double MIN_CURV_LOSS = 1.0e-6;  // 计算曲率时允许的误差
 const double MIN_DIS_SEG_LEN = 1.0;   // 计算距离时切分测地线的长度
-const double NEAR_DIS = double(MAX_MESH) * 0.1;  // 用于缓存较近的星球
+const double NEAR_DIS =
+    double(MAX_MESH) / sqrt(double(MAX_PLANET)) * 3.0;  // 用于缓存较近的星球
 
 class Planet : public Point
 {

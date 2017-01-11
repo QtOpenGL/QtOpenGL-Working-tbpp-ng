@@ -80,4 +80,29 @@ class NewRandom
 
 extern NewRandom newRandom;
 
+// 快速但不精确的倒数
+__inline__ float __attribute__((const)) reciprocal(float x)
+{
+    union {
+        float dbl;
+        unsigned uint;
+    } u;
+    u.dbl = x;
+    u.uint = (0xbe6eb3beU - u.uint) >> (unsigned char)1;
+    u.dbl *= u.dbl;
+    return u.dbl;
+}
+
+__inline__ double __attribute__((const)) reciprocal(double x)
+{
+    union {
+        double dbl;
+        unsigned long long ull;
+    } u;
+    u.dbl = x;
+    u.ull = (0xbfcdd6a18f6a6f52ULL - u.ull) >> (unsigned char)1;
+    u.dbl *= u.dbl;
+    return u.dbl;
+}
+
 #endif

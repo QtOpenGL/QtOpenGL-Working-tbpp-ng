@@ -1,4 +1,4 @@
-// 后端，用于在独立的线程中进行模拟文明的运算
+// 后端，在独立的线程中进行模拟文明的运算
 
 #ifndef BACKEND_H
 #define BACKEND_H
@@ -16,8 +16,10 @@ class Backend : public QObject
     Q_OBJECT
 
    public:
-    // paused用于用户暂停，locked用于线程保护
-    bool paused, locked;
+    // paused用于用户暂停
+    // locked用于线程保护
+    // slow为慢速模拟
+    bool paused, locked, slow;
 
     int lastClock, lastFpsTime;
     float fps;

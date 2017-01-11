@@ -137,11 +137,6 @@ void MainWindow::showMsg(QString s)
     }
 }
 
-void MainWindow::on_actionPause_toggled(bool b)
-{
-    backend->paused = b;
-}
-
 void MainWindow::on_actionOpen_triggered()
 {
     // 暂停模拟和星图显示
@@ -196,6 +191,31 @@ void MainWindow::on_actionSave_triggered(bool saveAs)
 void MainWindow::on_actionSaveAs_triggered()
 {
     on_actionSave_triggered(true);
+}
+
+void MainWindow::on_actionPause_toggled(bool b)
+{
+    backend->paused = b;
+}
+
+void MainWindow::on_actionSlow_toggled(bool b)
+{
+    backend->slow = b;
+}
+
+void MainWindow::on_actionShowFriendship_toggled(bool b)
+{
+    ui->myOpenGLWidget->showFriendship = b;
+}
+
+void MainWindow::on_actionShowParent_toggled(bool b)
+{
+    ui->myOpenGLWidget->showParentCivil = b;
+}
+
+void MainWindow::on_actionShowFleet_toggled(bool b)
+{
+    ui->myOpenGLWidget->showFleet = b;
 }
 
 void MainWindow::on_actionReset_triggered()

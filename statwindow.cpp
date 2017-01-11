@@ -3,9 +3,10 @@
 #include "statwindow.h"
 #include "ui_statwindow.h"
 
-const int MAX_DATA_FUNC = 8;
+const int MAX_DATA_FUNC = 12;
 
 const function<double(int)> dataFunc[MAX_DATA_FUNC] = {
+    [](int i) -> double { return double(i); },
     [](int i) -> double { return civils[i].birthTime; },
     [](int i) -> double {
         return civils[i].deathTime >= 0
@@ -26,11 +27,27 @@ const function<double(int)> dataFunc[MAX_DATA_FUNC] = {
     [](int i) -> double {
         civils[i].normalizeRate();
         return abs(civils[i].rateCoop);
-    }};
+    },
+    [](int i) -> double {
+        return double(civils[i].devCount) /
+               double(civils[i].devCount + civils[i].atkCount +
+                      civils[i].coopCount);
+    },
+    [](int i) -> double {
+        return double(civils[i].atkCount) /
+               double(civils[i].devCount + civils[i].atkCount +
+                      civils[i].coopCount);
+    },
+    [](int i) -> double {
+        return double(civils[i].coopCount) /
+               double(civils[i].devCount + civils[i].atkCount +
+                      civils[i].coopCount);
+    },
+};
 
-const QString dataLabel[MAX_DATA_FUNC] = {"诞生时间", "存活时间", "科技水平",
-                                          "时间曲率", "子文明数", "发展倾向",
-                                          "攻击倾向", "合作倾向"};
+const QString dataLabel[MAX_DATA_FUNC] = {
+    "文明编号", "诞生时间", "存活时间", "科技水平", "时间曲率", "子文明数",
+    "发展倾向", "攻击倾向", "合作倾向", "发展比例", "攻击比例", "合作比例"};
 
 StatWindow::StatWindow(QWidget* parent)
     : QWidget(parent), ui(new Ui::statWindow), pointColor(Qt::red)
@@ -42,7 +59,7 @@ StatWindow::StatWindow(QWidget* parent)
         ui->comboBox_2->addItem(dataLabel[i]);
     }
     ui->comboBox->setCurrentIndex(0);
-    ui->comboBox_2->setCurrentIndex(2);
+    ui->comboBox_2->setCurrentIndex(3);
 }
 
 StatWindow::~StatWindow()

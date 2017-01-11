@@ -62,7 +62,6 @@
     <property name="title">
      <string>文件</string>
     </property>
-    <addaction name="actionPause"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
@@ -71,7 +70,13 @@
     <property name="title">
      <string>显示</string>
     </property>
+    <addaction name="actionPause"/>
+    <addaction name="actionSlow"/>
+    <addaction name="actionShowFriendship"/>
+    <addaction name="actionShowParent"/>
+    <addaction name="actionShowFleet"/>
     <addaction name="actionReset"/>
+    <addaction name="separator"/>
     <addaction name="actionStat"/>
    </widget>
    <addaction name="menu_File"/>
@@ -82,9 +87,6 @@
   <action name="actionOpen">
    <property name="text">
     <string>打开...</string>
-   </property>
-   <property name="toolTip">
-    <string>打开</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -160,6 +162,53 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Alt+S</string>
+   </property>
+  </action>
+  <action name="actionSlow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>慢速</string>
+   </property>
+   <property name="toolTip">
+    <string>慢速</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="actionShowParent">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>母星</string>
+   </property>
+   <property name="toolTip">
+    <string>母星球</string>
+   </property>
+  </action>
+  <action name="actionShowFleet">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>舰队</string>
+   </property>
+   <property name="toolTip">
+    <string>舰队</string>
+   </property>
+  </action>
+  <action name="actionShowFriendship">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>外交</string>
+   </property>
+   <property name="toolTip">
+    <string>外交</string>
    </property>
   </action>
  </widget>

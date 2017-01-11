@@ -1,4 +1,4 @@
-// 后端，用于在独立的线程中进行模拟文明的运算
+// 后端，在独立的线程中进行模拟文明的运算
 
 #include "backend.h"
 
@@ -6,15 +6,21 @@ Backend *backend;
 
 // 初始暂停运算，用户手动开始
 Backend::Backend()
-    : paused(true), locked(false), lastClock(0), lastFpsTime(0), fps(0.0)
+    : paused(true),
+      locked(false),
+      slow(false),
+      lastClock(0),
+      lastFpsTime(0),
+      fps(0.0)
 {
 }
 
 void Backend::init()
 {
     emit msg("正在初始化星球数据...");
-    planets[0] = Planet(0, 0, Point(CENTER_POS, CENTER_POS), 100.0);
-    for (int i = 1; i < MAX_PLANET; ++i)
+    planets[0] = Planet(0, 0, Point(30.0, 50.0), 100.0);
+    planets[1] = Planet(1, 1, Point(70.0, 50.0), 100.0);
+    for (int i = 2; i < MAX_PLANET; ++i)
         planets[i] =
             Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
     emit msg("正在计算时空曲率...");
@@ -33,6 +39,7 @@ void Backend::init()
 
 void Backend::lock()
 {
+    // 等待上个锁解除
     while (locked) QThread::msleep(1);
     locked = true;
 }
@@ -46,10 +53,8 @@ void Backend::work()
 {
     while (true)
     {
-        // TODO：将这句注释掉则全速运行
-        //        QThread::msleep(100);
-
         while (paused || locked) QThread::msleep(1);
+        if (slow) QThread::msleep(100);
 
         ++space.clock;
         if (space.clock >= MAX_CLOCK) break;

@@ -19,7 +19,7 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     Q_OBJECT
 
    public:
-    bool paused;
+    bool paused, showFriendship, showParentCivil, showFleet;
     float xPos, yPos, zPos, xSpd, ySpd, zSpd;
     bool mouseInLeftEdge, mouseInRightEdge, mouseInTopEdge, mouseInBottomEdge;
     // -1表示未选中
@@ -53,8 +53,8 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
 
     void drawCircle(float x, float y, float r, float colorR, float colorG,
                     float colorB);
-    void drawLine(vector<GLfloat> &vertices, int vertexCount, float colorR,
-                  float colorG, float colorB);
+    void drawLine(vector<GLfloat> &vertices, float colorR, float colorG,
+                  float colorB);
 
     void keyPressEvent(QKeyEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

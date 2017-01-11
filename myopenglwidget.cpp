@@ -26,6 +26,9 @@ const float MOVE_SPD_WHEEL = 0.1;
 MyOpenGLWidget::MyOpenGLWidget(QWidget *parent)
     : QOpenGLWidget(parent),
       paused(true),
+      showFriendship(false),
+      showParentCivil(false),
+      showFleet(false),
       xPos(0.0),
       yPos(0.0),
       zPos(0.0),
@@ -213,7 +216,8 @@ void MyOpenGLWidget::paintGL()
         float tTech = c.tech / maxTech;
 
         float tHue;
-        if (selectedPlanetId >= 0 && p.planetId != selectedPlanetId)
+        if (showFriendship && selectedPlanetId >= 0 &&
+            p.planetId != selectedPlanetId)
         {
             float tFriendship = Civil::friendship[selectedPlanetId][p.planetId];
             if (tFriendship > 0.0)
@@ -252,36 +256,97 @@ void MyOpenGLWidget::paintGL()
         // 绘制选中星球的圆圈，无发光效果
         Planet &p = planets[selectedPlanetId];
         // 将星球坐标转换为场景坐标
-        float drawX = planetToDrawPos(p.x);
-        float drawY = planetToDrawPos(p.y);
+        float selfDrawX = planetToDrawPos(p.x);
+        float selfDrawY = planetToDrawPos(p.y);
         float r = p.radius + 0.005;
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        drawCircle(drawX, drawY, r, 1.0, 1.0, 1.0);
+        drawCircle(selfDrawX, selfDrawY, r, 1.0, 1.0, 1.0);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        /* DEPRECATED
         // 绘制选中星球到母星球的线段
-        vector<GLfloat> vertices(MAX_PLANET * 3);
-        int vertexCount = 0;
-        int nowCivilId = planets[selectedPlanetId].civilId;
-        while (true)
+        const int MAX_VERTICES = 60;
+        if (showParentCivil)
         {
-            Civil &c = civils[nowCivilId];
-            if (c.parentCivilId == -1 ||
-                (c.parentCivilId >= 0 &&
-                 civils[c.parentCivilId].deathTime >= 0))
-                break;
-            Planet &p = planets[c.planetId];
-            float drawX = planetToDrawPos(p.x);
-            float drawY = planetToDrawPos(p.y);
-            vertices[vertexCount * 3] = drawX;
-            vertices[vertexCount * 3 + 1] = drawY;
-            vertices[vertexCount * 3 + 2] = 0.0;
-            nowCivilId = c.parentCivilId;
-            ++vertexCount;
+            vector<GLfloat> vertices;
+            //            vertices.reserve(MAX_PLANET * 6);
+            int nowCivilId = p.civilId;
+            while (true)
+            {
+                Civil &c = civils[nowCivilId];
+                if (c.parentCivilId == -1 || vertices.size() >= MAX_VERTICES)
+                    break;
+                Planet &p2 = planets[c.planetId];
+                vertices.push_back(planetToDrawPos(p2.x));
+                vertices.push_back(planetToDrawPos(p2.y));
+                vertices.push_back(0.0);
+
+                Planet &p3 = planets[civils[c.parentCivilId].planetId];
+                vertices.push_back(planetToDrawPos(p3.x));
+                vertices.push_back(planetToDrawPos(p3.y));
+                vertices.push_back(0.0);
+
+                nowCivilId = c.parentCivilId;
+            }
+            if (vertices.size() >= 6) drawLine(vertices, 1.0, 1.0, 1.0);
         }
-        if (vertexCount > 0) drawLine(vertices, vertexCount, 1.0, 1.0, 1.0);
-        */
+
+        // 绘制选中星球附近的舰队
+        if (showFleet)
+        {
+            vector<GLfloat> verticesAtk, verticesCoop;
+            for (auto i = fleets.begin(); i != fleets.end(); ++i)
+            {
+                if ((civils[i->fromCivilId].planetId == p.planetId ||
+                     space.isNear[civils[i->fromCivilId].planetId]
+                                 [p.planetId]) &&
+                    (i->targetPlanetId == p.planetId ||
+                     space.isNear[i->targetPlanetId][p.planetId]))
+                {
+                    if (i->actType == ACT_ATK)
+                    {
+                        Planet &pFrom =
+                            planets[civils[i->fromCivilId].planetId];
+                        float fromDrawX = planetToDrawPos(pFrom.x);
+                        float fromDrawY = planetToDrawPos(pFrom.y);
+                        verticesAtk.push_back(fromDrawX);
+                        verticesAtk.push_back(fromDrawY);
+                        verticesAtk.push_back(0.0);
+
+                        Planet &pTarget = planets[i->targetPlanetId];
+                        float targetDrawX = planetToDrawPos(pTarget.x);
+                        float targetDrawY = planetToDrawPos(pTarget.y);
+                        float progress = i->remainDis / i->initDis;
+                        verticesAtk.push_back(fromDrawX * progress +
+                                              targetDrawX * (1.0 - progress));
+                        verticesAtk.push_back(fromDrawY * progress +
+                                              targetDrawY * (1.0 - progress));
+                        verticesAtk.push_back(0.0);
+                    }
+                    else  // i->actType == ACT_Coop
+                    {
+                        Planet &pFrom =
+                            planets[civils[i->fromCivilId].planetId];
+                        float fromDrawX = planetToDrawPos(pFrom.x);
+                        float fromDrawY = planetToDrawPos(pFrom.y);
+                        verticesCoop.push_back(fromDrawX);
+                        verticesCoop.push_back(fromDrawY);
+                        verticesCoop.push_back(0.0);
+
+                        Planet &pTarget = planets[i->targetPlanetId];
+                        float targetDrawX = planetToDrawPos(pTarget.x);
+                        float targetDrawY = planetToDrawPos(pTarget.y);
+                        float progress = i->remainDis / i->initDis;
+                        verticesCoop.push_back(fromDrawX * progress +
+                                               targetDrawX * (1.0 - progress));
+                        verticesCoop.push_back(fromDrawY * progress +
+                                               targetDrawY * (1.0 - progress));
+                        verticesCoop.push_back(0.0);
+                    }
+                }
+            }
+            if (verticesAtk.size() >= 6) drawLine(verticesAtk, 1.0, 0.0, 0.0);
+            if (verticesCoop.size() >= 6) drawLine(verticesCoop, 0.0, 0.5, 1.0);
+        }
     }
 
     vertexArray.release();
@@ -354,9 +419,12 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
     shader.setUniformValue("color", colorR, colorG, colorB);
 
     // 根据半径和缩放调整画圆的线段数
+    const int MIN_CIRCLE_SEG = 6;
+    const int MAX_CIRCLE_SEG = 50;
+
     int segCount = floor(1000.0 * r / abs(PLANET_Z - zPos));
-    if (segCount < 6) segCount = 6;
-    if (segCount > 50) segCount = 50;
+    if (segCount < MIN_CIRCLE_SEG) segCount = MIN_CIRCLE_SEG;
+    if (segCount > MAX_CIRCLE_SEG) segCount = MAX_CIRCLE_SEG;
 
     // 画圆用到的临时变量
     float th = 2.0 * M_PI / float(segCount);
@@ -366,7 +434,7 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
     float py = 0;
 
     // 构造顶点数组
-    GLfloat vertices[150];
+    GLfloat vertices[MAX_CIRCLE_SEG * 3];
     for (int i = 0; i < segCount; ++i)
     {
         vertices[i * 3] = px;
@@ -390,13 +458,14 @@ void MyOpenGLWidget::drawCircle(float x, float y, float r, float colorR,
     glDrawArrays(GL_POLYGON, 0, segCount);
 }
 
-void MyOpenGLWidget::drawLine(vector<GLfloat> &vertices, int vertexCount,
-                              float colorR, float colorG, float colorB)
+void MyOpenGLWidget::drawLine(vector<GLfloat> &vertices, float colorR,
+                              float colorG, float colorB)
 {
     // 将场景坐标转换为屏幕坐标
     // 半径大的星球略微往下移动，防止挡住半径小的星球
     QMatrix4x4 matrix = projMat;
     matrix.translate(xPos, yPos, zPos - PLANET_Z);
+    shader.setUniformValue("matrix", matrix);
 
 // 防止颜色超出范围
 #define chop(a) a = min(max(a, 0.0f), 1.0f)
@@ -406,21 +475,17 @@ void MyOpenGLWidget::drawLine(vector<GLfloat> &vertices, int vertexCount,
 #undef chop
     shader.setUniformValue("color", colorR, colorG, colorB);
 
-    // 构造顶点数组
-    GLfloat vertices2[MAX_PLANET * 3];
-    for (int i = 0; i < vertexCount * 3; ++i) vertices2[i] = vertices[i];
-
     // 写入顶点数组
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, vertexCount * 3 * sizeof(GLfloat), &vertices2,
-                 GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat),
+                 &vertices[0], GL_DYNAMIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat),
                           (GLvoid *)(0));
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // 绘制
-    glDrawArrays(GL_LINE_STRIP, 0, vertexCount);
+    glDrawArrays(GL_LINES, 0, vertices.size());
 }
 
 void MyOpenGLWidget::keyPressEvent(QKeyEvent *event)
@@ -503,6 +568,7 @@ void MyOpenGLWidget::mousePressEvent(QMouseEvent *event)
         matrix *= projMat.inverted();
         testVec = matrix * QVector4D(scrX * testVec.w(), scrY * testVec.w(),
                                      testVec.z(), testVec.w());
+
         // 将场景坐标转换为星球坐标
         float planetX = drawToPlanetPos(testVec.x());
         float planetY = drawToPlanetPos(testVec.y());
