@@ -43,7 +43,8 @@ class BigVector
 
     ~BigVector()
     {
-        for (size_t i = 0; i < (_size >> CACHE_SIZE_BIT); ++i) delete cache[i];
+        for (size_t i = 0; i < (_size >> CACHE_SIZE_BIT) + 1; ++i)
+            delete cache[i];
     }
 
     size_t size()

@@ -34,6 +34,7 @@ class MainWindow : public QMainWindow
     QTimer *timer;
     QString fileName;  // 当前打开的数据路径
     int lastAutoSaveTime;
+    bool inited;  // 是否初始化
 
     void loadData();
     void saveData();

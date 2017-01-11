@@ -76,6 +76,8 @@ template <typename T>
 void serializeList(const char* fileName, const list<T>& objectList)
 {
     FILE* fbin = fopen(fileName, "wb");
+    size_t listSize = objectList.size();
+    fwrite(addressof(listSize), sizeof(size_t), 1, fbin);
     for (auto i = objectList.begin(); i != objectList.end(); ++i)
         fwrite(addressof(*i), sizeof(T), 1, fbin);
     fclose(fbin);
@@ -87,10 +89,15 @@ template <typename T>
 void deserializeList(const char* fileName, list<T>& objectList)
 {
     objectList.clear();
-    T tObject;
     FILE* fbin = fopen(fileName, "rb");
-    while (fread(addressof(tObject), sizeof(T), 1, fbin) == sizeof(T))
+    size_t listSize;
+    fread(addressof(listSize), sizeof(size_t), 1, fbin);
+    T tObject;
+    for (size_t i = 0; i < listSize; ++i)
+    {
+        fread(addressof(tObject), sizeof(T), 1, fbin);
         objectList.push_back(tObject);
+    }
     fclose(fbin);
 }
 
@@ -99,6 +106,8 @@ template <typename T>
 void serializeList(const char* fileName, const vector<T>& objectList)
 {
     FILE* fbin = fopen(fileName, "wb");
+    size_t listSize = objectList.size();
+    fwrite(addressof(listSize), sizeof(size_t), 1, fbin);
     for (auto i = objectList.begin(); i != objectList.end(); ++i)
         fwrite(addressof(*i), sizeof(T), 1, fbin);
     fclose(fbin);
@@ -109,11 +118,11 @@ void serializeList(const char* fileName, const vector<T>& objectList)
 template <typename T>
 void deserializeList(const char* fileName, vector<T>& objectList)
 {
-    objectList.clear();
-    T tObject;
-    FILE* fbin = fopen(fileName, "rb");
-    while (fread(addressof(tObject), sizeof(T), 1, fbin) == sizeof(T))
-        objectList.push_back(tObject);
+    FILE* fbin = fopen(fileName, "wb");
+    size_t listSize = objectList.size();
+    fwrite(addressof(listSize), sizeof(size_t), 1, fbin);
+    for (auto i = objectList.begin(); i != objectList.end(); ++i)
+        fwrite(addressof(*i), sizeof(T), 1, fbin);
     fclose(fbin);
 }
 
@@ -125,7 +134,7 @@ void serializeList(const char* fileName, const BigVector<T>& objectList)
     FILE* fbin = fopen(fileName, "wb");
     fwrite(addressof(objectList._size), sizeof(objectList._size), 1, fbin);
     fclose(fbin);
-    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT); ++i)
+    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT) + 1; ++i)
     {
         FILE* fbin =
             fopen((string(fileName) + "." + to_string(i)).c_str(), "wb");
@@ -139,12 +148,12 @@ void serializeList(const char* fileName, const BigVector<T>& objectList)
 template <typename T>
 void deserializeList(const char* fileName, BigVector<T>& objectList)
 {
-    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT); ++i)
+    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT) + 1; ++i)
         delete objectList.cache[i];
     FILE* fbin = fopen(fileName, "rb");
     fread(addressof(objectList._size), sizeof(objectList._size), 1, fbin);
     fclose(fbin);
-    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT); ++i)
+    for (size_t i = 0; i < (objectList._size >> CACHE_SIZE_BIT) + 1; ++i)
     {
         objectList.cache[i] = new BigVectorCache<T>;
         FILE* fbin =

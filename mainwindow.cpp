@@ -8,11 +8,27 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
       fileName("autosave/auto.sav"),
-      lastAutoSaveTime(0)
+      lastAutoSaveTime(0),
+      inited(false)
 {
     ui->setupUi(this);
     setWindowFlags(Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
     setFixedSize(width(), height());
+
+    // 创建后端
+    backend = new Backend();
+    backend->moveToThread(&backendThread);
+    connect(this, &MainWindow::backendWork, backend, &Backend::work);
+    connect(backend, &Backend::msg, this, &MainWindow::showMsg);
+
+    // 创建刷新星图用的计时器
+    timer = new QTimer();
+    connect(timer, &QTimer::timeout, this, &MainWindow::animate);
+
+    // 创建自动存档用的文件夹
+    QDir dir("autosave");
+    if (!dir.exists()) dir.mkpath(".");
+
     showMsg("请初始化或打开存档");
 }
 
@@ -119,27 +135,21 @@ void MainWindow::showMsg(QString s)
 
 void MainWindow::on_actionInit_triggered()
 {
-    // 创建自动存档用的文件夹
-    QDir dir("autosave");
-    if (!dir.exists()) dir.mkpath(".");
+    if (inited) return;
 
     // 开始全局计时器
     gTime.start();
 
     // 开始运行后端
-    backend = new Backend();
-    backend->moveToThread(&backendThread);
-    connect(this, &MainWindow::backendWork, backend, &Backend::work);
-    connect(backend, &Backend::msg, this, &MainWindow::showMsg);
     backendThread.start();
     backend->init();
     emit backendWork();
 
     // 开始刷新星图
-    timer = new QTimer();
-    connect(timer, &QTimer::timeout, this, &MainWindow::animate);
     timer->start(33);
     ui->myOpenGLWidget->paused = false;
+
+    inited = true;
 }
 
 void MainWindow::on_actionOpen_triggered()
@@ -147,12 +157,12 @@ void MainWindow::on_actionOpen_triggered()
     // 暂停模拟和星图显示
     ui->myOpenGLWidget->paused = true;
     backend->lock();
-    fileName = QFileDialog::getOpenFileName(
+    QString tmpFileName = QFileDialog::getOpenFileName(
         this, tr("打开"), "", tr("二进制格式 (*.sav);;所有文件 (*.*)"));
-    if (!fileName.isEmpty())
+    if (!tmpFileName.isEmpty())
     {
         // 读取用于标记存档位置的文件
-        QFile file(fileName);
+        QFile file(tmpFileName);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QMessageBox::critical(this, tr("错误"), tr("打开文件失败"));
@@ -161,14 +171,30 @@ void MainWindow::on_actionOpen_triggered()
         {
             file.close();
             loadData();
+            fileName = tmpFileName;
+            if (!inited)
+            {
+                // 开始全局计时器
+                gTime.start();
+
+                // 开始运行后端，不用再初始化数据
+                backendThread.start();
+                emit backendWork();
+
+                // 开始刷新星图
+                timer->start(33);
+
+                inited = true;
+            }
         }
     }
     backend->unlock();
-    ui->myOpenGLWidget->paused = false;
+    if (inited) ui->myOpenGLWidget->paused = false;
 }
 
 void MainWindow::on_actionSave_triggered()
 {
+    if (!inited) return;
     // 暂停模拟和星图显示
     ui->myOpenGLWidget->paused = true;
     backend->lock();
@@ -190,21 +216,22 @@ void MainWindow::on_actionSave_triggered()
         }
     }
     backend->unlock();
-    ui->myOpenGLWidget->paused = false;
+    if (inited) ui->myOpenGLWidget->paused = false;
 }
 
 void MainWindow::on_actionSaveAs_triggered()
 {
+    if (!inited) return;
     // 暂停模拟和星图显示
     ui->myOpenGLWidget->paused = true;
     backend->lock();
-    // 无论是否设置过fileName，都要重新设置
-    fileName = QFileDialog::getSaveFileName(
+    // 无论fileName是否为空，都要获取新的文件名
+    QString tmpFileName = QFileDialog::getSaveFileName(
         this, tr("另存为"), "", tr("二进制格式 (*.sav);;所有文件 (*.*)"));
-    if (!fileName.isEmpty())
+    if (!tmpFileName.isEmpty())
     {
         // 写入用于标记存档位置的文件
-        QFile file(fileName);
+        QFile file(tmpFileName);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         {
             QMessageBox::critical(this, tr("错误"), tr("保存文件失败"));
@@ -213,14 +240,16 @@ void MainWindow::on_actionSaveAs_triggered()
         {
             file.close();
             saveData();
+            fileName = tmpFileName;
         }
     }
     backend->unlock();
-    ui->myOpenGLWidget->paused = false;
+    if (inited) ui->myOpenGLWidget->paused = false;
 }
 
 void MainWindow::on_actionImportStg_triggered()
 {
+    if (!inited) return;
     // 暂停模拟和星图显示
     ui->myOpenGLWidget->paused = true;
     backend->lock();
@@ -258,11 +287,12 @@ void MainWindow::on_actionImportStg_triggered()
         }
     }
     backend->unlock();
-    ui->myOpenGLWidget->paused = false;
+    if (inited) ui->myOpenGLWidget->paused = false;
 }
 
 void MainWindow::on_actionExportStg_triggered()
 {
+    if (!inited) return;
     // 暂停模拟和星图显示
     ui->myOpenGLWidget->paused = true;
     backend->lock();
