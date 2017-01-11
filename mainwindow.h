@@ -41,6 +41,7 @@ class MainWindow : public QMainWindow
    public slots:
     void animate();
     void showMsg(QString s);
+    void on_actionInit_triggered();                // 初始化
     void on_actionOpen_triggered();                // 打开数据
     void on_actionSave_triggered();                // 保存数据
     void on_actionSaveAs_triggered();              // 另存为数据

@@ -3,8 +3,10 @@
 #ifndef BACKEND_H
 #define BACKEND_H
 
+#include <QFile>
 #include <QObject>
 #include <QString>
+#include <QTextStream>
 #include <QThread>
 #include "civil.h"
 #include "globaltime.h"
@@ -27,9 +29,13 @@ class Backend : public QObject
 
     void lock();
     void unlock();
+    void init();
 
    public slots:
     void work();
+
+   signals:
+    msg(QString s);
 };
 
 extern Backend *backend;

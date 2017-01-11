@@ -13,56 +13,7 @@ MainWindow::MainWindow(QWidget* parent)
     ui->setupUi(this);
     setWindowFlags(Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
     setFixedSize(width(), height());
-
-    // 创建自动存档用的文件夹
-    QDir dir("autosave");
-    if (!dir.exists()) dir.mkpath(".");
-
-    showMsg("正在读取星球数据...");
-    int inPlanetCount = 0;
-    QFile file("in.txt");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
-        QTextStream in(&file);
-        while (!in.atEnd())
-        {
-            double x, y, mass;
-            in >> x >> y >> mass;
-            planets[inPlanetCount] =
-                Planet(inPlanetCount, inPlanetCount, Point(x, y), mass);
-            ++inPlanetCount;
-        }
-        file.close();
-    }
-    showMsg("正在初始化剩余星球数据...");
-    for (int i = inPlanetCount; i < MAX_PLANET; ++i)
-        planets[i] =
-            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
-    showMsg("正在计算时空曲率...");
-    space.calcCurv();
-    showMsg("正在计算星球距离...");
-    space.calcPlanetDis();
-    showMsg("正在初始化文明数据...");
-    for (int i = 0; i < MAX_PLANET; ++i)
-    {
-        Civil c(i, i);
-        civils.push_back(c);
-    }
-    Civil::initFriendship();
-    showMsg("初始化完成");
-
-    gTime.start();
-
-    backend = new Backend();
-    backend->moveToThread(&backendThread);
-    connect(this, &MainWindow::backendWork, backend, &Backend::work);
-    backendThread.start();
-    emit backendWork();
-
-    timer = new QTimer();
-    connect(timer, &QTimer::timeout, this, &MainWindow::animate);
-    timer->start(33);
-    ui->myOpenGLWidget->paused = false;
+    showMsg("请初始化或打开存档");
 }
 
 MainWindow::~MainWindow()
@@ -164,6 +115,31 @@ void MainWindow::animate()
 void MainWindow::showMsg(QString s)
 {
     ui->statusBar->showMessage(s);
+}
+
+void MainWindow::on_actionInit_triggered()
+{
+    // 创建自动存档用的文件夹
+    QDir dir("autosave");
+    if (!dir.exists()) dir.mkpath(".");
+
+    // 开始全局计时器
+    gTime.start();
+
+    // 开始运行后端
+    backend = new Backend();
+    backend->moveToThread(&backendThread);
+    connect(this, &MainWindow::backendWork, backend, &Backend::work);
+    connect(backend, &Backend::msg, this, &MainWindow::showMsg);
+    backendThread.start();
+    backend->init();
+    emit backendWork();
+
+    // 开始刷新星图
+    timer = new QTimer();
+    connect(timer, &QTimer::timeout, this, &MainWindow::animate);
+    timer->start(33);
+    ui->myOpenGLWidget->paused = false;
 }
 
 void MainWindow::on_actionOpen_triggered()

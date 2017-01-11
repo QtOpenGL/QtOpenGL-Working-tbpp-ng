@@ -28,6 +28,42 @@ void Backend::unlock()
     locked = false;
 }
 
+void Backend::init()
+{
+    emit msg("正在读取星球数据...");
+    int inPlanetCount = 0;
+    QFile file("in.txt");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream in(&file);
+        while (!in.atEnd())
+        {
+            double x, y, mass;
+            in >> x >> y >> mass;
+            planets[inPlanetCount] =
+                Planet(inPlanetCount, inPlanetCount, Point(x, y), mass);
+            ++inPlanetCount;
+        }
+        file.close();
+    }
+    emit msg("正在初始化剩余星球数据...");
+    for (int i = inPlanetCount; i < MAX_PLANET; ++i)
+        planets[i] =
+            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
+    emit msg("正在计算时空曲率...");
+    space.calcCurv();
+    emit msg("正在计算星球距离...");
+    space.calcPlanetDis();
+    emit msg("正在初始化文明数据...");
+    for (int i = 0; i < MAX_PLANET; ++i)
+    {
+        Civil c(i, i);
+        civils.push_back(c);
+    }
+    Civil::initFriendship();
+    emit msg("初始化完成");
+}
+
 void Backend::work()
 {
     while (true)

@@ -62,6 +62,7 @@
     <property name="title">
      <string>文件</string>
     </property>
+    <addaction name="actionInit"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
@@ -257,6 +258,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+9</string>
+   </property>
+  </action>
+  <action name="actionInit">
+   <property name="text">
+    <string>初始化</string>
+   </property>
+   <property name="toolTip">
+    <string>初始化</string>
    </property>
   </action>
  </widget>
