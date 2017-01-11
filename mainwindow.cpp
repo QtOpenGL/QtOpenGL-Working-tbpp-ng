@@ -13,26 +13,56 @@ MainWindow::MainWindow(QWidget* parent)
     ui->setupUi(this);
     setWindowFlags(Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
     setFixedSize(width(), height());
-    connect(ui->myOpenGLWidget, &MyOpenGLWidget::msg, this,
-            &MainWindow::showMsg);
 
     // 创建自动存档用的文件夹
     QDir dir("autosave");
     if (!dir.exists()) dir.mkpath(".");
 
+    showMsg("正在读取星球数据...");
+    int inPlanetCount = 0;
+    QFile file("in.txt");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream in(&file);
+        while (!in.atEnd())
+        {
+            double x, y, mass;
+            in >> x >> y >> mass;
+            planets[inPlanetCount] =
+                Planet(inPlanetCount, inPlanetCount, Point(x, y), mass);
+            ++inPlanetCount;
+        }
+        file.close();
+    }
+    showMsg("正在初始化剩余星球数据...");
+    for (int i = inPlanetCount; i < MAX_PLANET; ++i)
+        planets[i] =
+            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
+    showMsg("正在计算时空曲率...");
+    space.calcCurv();
+    showMsg("正在计算星球距离...");
+    space.calcPlanetDis();
+    showMsg("正在初始化文明数据...");
+    for (int i = 0; i < MAX_PLANET; ++i)
+    {
+        Civil c(i, i);
+        civils.push_back(c);
+    }
+    Civil::initFriendship();
+    showMsg("初始化完成");
+
     gTime.start();
 
     backend = new Backend();
     backend->moveToThread(&backendThread);
-    connect(this, &MainWindow::backendInit, backend, &Backend::init);
     connect(this, &MainWindow::backendWork, backend, &Backend::work);
-    connect(backend, &Backend::msg, this, &MainWindow::showMsg);
     backendThread.start();
-    emit backendInit();
+    emit backendWork();
 
     timer = new QTimer();
     connect(timer, &QTimer::timeout, this, &MainWindow::animate);
     timer->start(33);
+    ui->myOpenGLWidget->paused = false;
 }
 
 MainWindow::~MainWindow()
@@ -119,7 +149,7 @@ void MainWindow::animate()
             backend->lock();
             // 写入用于标记存档位置的文件
             QFile file(fileName);
-            if (file.open(QIODevice::WriteOnly))
+            if (file.open(QIODevice::WriteOnly | QIODevice::Text))
             {
                 file.close();
                 saveData();
@@ -134,11 +164,6 @@ void MainWindow::animate()
 void MainWindow::showMsg(QString s)
 {
     ui->statusBar->showMessage(s);
-    if (s == "后端初始化完成")
-    {
-        emit backendWork();
-        ui->myOpenGLWidget->paused = false;
-    }
 }
 
 void MainWindow::on_actionOpen_triggered()
@@ -152,7 +177,7 @@ void MainWindow::on_actionOpen_triggered()
     {
         // 读取用于标记存档位置的文件
         QFile file(fileName);
-        if (!file.open(QIODevice::ReadOnly))
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QMessageBox::critical(this, tr("错误"), tr("打开文件失败"));
         }
@@ -178,7 +203,7 @@ void MainWindow::on_actionSave_triggered()
     {
         // 写入用于标记存档位置的文件
         QFile file(fileName);
-        if (!file.open(QIODevice::WriteOnly))
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         {
             QMessageBox::critical(this, tr("错误"), tr("保存文件失败"));
         }
@@ -204,7 +229,7 @@ void MainWindow::on_actionSaveAs_triggered()
     {
         // 写入用于标记存档位置的文件
         QFile file(fileName);
-        if (!file.open(QIODevice::WriteOnly))
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         {
             QMessageBox::critical(this, tr("错误"), tr("保存文件失败"));
         }
@@ -227,22 +252,18 @@ void MainWindow::on_actionImportStg_triggered()
         this, tr("导入策略参数"), "", tr("JSON格式 (*.json);;所有文件 (*.*)"));
     if (!tmpFileName.isEmpty())
     {
-        ifstream in(tmpFileName.toLocal8Bit().data(), fstream::in);
-        if (!in)
+        QFile file(tmpFileName);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QMessageBox::critical(this, tr("错误"), tr("打开文件失败"));
         }
         else
         {
-            string str, chunk;
-            str = "";
-            while (!in.eof())
-            {
-                getline(in, chunk);
-                str += chunk;
-            }
-            in.close();
-
+            QString qs = "";
+            QTextStream in(&file);
+            while (!in.atEnd()) qs += in.readLine();
+            file.close();
+            string str = qs.toLocal8Bit().constData();
             Json::Reader reader;
             Json::Value js;
             reader.parse(str, js);
@@ -273,8 +294,8 @@ void MainWindow::on_actionExportStg_triggered()
         this, tr("导出策略参数"), "", tr("JSON格式 (*.json);;所有文件 (*.*)"));
     if (!tmpFileName.isEmpty())
     {
-        ofstream out(tmpFileName.toLocal8Bit().data(), fstream::out);
-        if (!out)
+        QFile file(tmpFileName);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         {
             QMessageBox::critical(this, tr("错误"), tr("保存文件失败"));
         }
@@ -297,9 +318,9 @@ void MainWindow::on_actionExportStg_triggered()
             builder["commentStyle"] = "None";
             builder["indentation"] = "";
             builder["precision"] = 3;
-            auto writer(builder.newStreamWriter());
-            writer->write(js, &out);
-            out.close();
+            QTextStream out(&file);
+            out << QString::fromStdString(Json::writeString(builder, js));
+            file.close();
         }
     }
     backend->unlock();

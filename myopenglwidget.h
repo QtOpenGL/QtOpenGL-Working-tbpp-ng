@@ -66,9 +66,6 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
 
    public slots:
     void animate();
-
-   signals:
-    msg(QString s);
 };
 
 #endif

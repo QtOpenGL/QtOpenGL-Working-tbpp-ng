@@ -6,7 +6,6 @@
 #include <QObject>
 #include <QString>
 #include <QThread>
-#include <fstream>
 #include "civil.h"
 #include "globaltime.h"
 
@@ -21,21 +20,16 @@ class Backend : public QObject
     // locked用于线程保护
     // slow为慢速模拟
     bool paused, locked, slow;
-
     int lastClock, lastFpsTime;
     float fps;
 
-    Backend();
+    Backend(QObject *parent = 0);
 
-    void init();
     void lock();
     void unlock();
 
    public slots:
     void work();
-
-   signals:
-    msg(QString s);
 };
 
 extern Backend *backend;

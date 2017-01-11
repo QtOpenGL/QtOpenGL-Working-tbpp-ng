@@ -8,7 +8,6 @@
 #include <QString>
 #include <QThread>
 #include <QTimer>
-#include <fstream>
 #include "backend.h"
 #include "libs/jsoncpp.h"
 #include "statwindow.h"
@@ -58,7 +57,6 @@ class MainWindow : public QMainWindow
     void on_actionAbout_triggered();               // 版权信息
 
    signals:
-    backendInit();
     backendWork();
 };
 

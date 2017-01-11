@@ -5,49 +5,15 @@
 Backend *backend;
 
 // 初始暂停运算，用户手动开始
-Backend::Backend()
-    : paused(true),
+Backend::Backend(QObject *parent)
+    : QObject(parent),
+      paused(true),
       locked(false),
       slow(false),
       lastClock(0),
       lastFpsTime(0),
       fps(0.0)
 {
-}
-
-void Backend::init()
-{
-    emit msg("正在读取星球数据...");
-    int inPlanetCount = 0;
-    ifstream in("in.txt", fstream::in);
-    if (in)
-    {
-        while (!in.eof())
-        {
-            double x, y, mass;
-            in >> x >> y >> mass;
-            planets[inPlanetCount] =
-                Planet(inPlanetCount, inPlanetCount, Point(x, y), mass);
-            ++inPlanetCount;
-        }
-        in.close();
-    }
-    emit msg("正在初始化星球数据...");
-    for (int i = inPlanetCount; i < MAX_PLANET; ++i)
-        planets[i] =
-            Planet(i, i, newRandom.getPoint() * 100.0, newRandom.get() * 10.0);
-    emit msg("正在计算时空曲率...");
-    space.calcCurv();
-    emit msg("正在计算星球距离...");
-    space.calcPlanetDis();
-    emit msg("正在初始化文明数据...");
-    for (int i = 0; i < MAX_PLANET; ++i)
-    {
-        Civil c(i, i);
-        civils.push_back(c);
-    }
-    Civil::initFriendship();
-    emit msg("后端初始化完成");
 }
 
 void Backend::lock()
