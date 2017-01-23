@@ -1,4 +1,5 @@
 // 星图控件
+// Star Chart Control
 
 #ifndef MYOPENGLWIDGET_H
 #define MYOPENGLWIDGET_H
@@ -23,6 +24,7 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     float xPos, yPos, zPos, xSpd, ySpd, zSpd;
     bool mouseInLeftEdge, mouseInRightEdge, mouseInTopEdge, mouseInBottomEdge;
     // -1表示未选中
+    // -1 means unchecked
     int selectedPlanetId;
     int frameCount, lastFpsTime;
     float fps;
@@ -37,17 +39,23 @@ class MyOpenGLWidget : public QOpenGLWidget, public QOpenGLExtraFunctions
     int retinaScale;
     QPoint lastMousePoint;
     // 星球、线段、发光效果、合成的着色器
+    // Planet, Line, Glow, Composite Shader
     QOpenGLShaderProgram shader, shaderLine, shaderBlur, shaderPost;
     // 星球、屏幕的顶点数组
+    // Planet, the vertex array of the screen
     QOpenGLVertexArrayObject vertexArray, scrVertexArray;
     GLuint vertexBuffer,
         // 绘制发光效果用的缓冲区
+        // Draws a buffer for glowing effects
         frameBuffer, colorBuffers[2], depthBuffer,
         // 通过迭代获得较好的发光效果，需交替使用两个缓冲区
+        // Through the iteration to obtain a better luminous effect, the need to alternate the use of two buffers
         pingpongFrameBuffers[2], pingpongColorBuffers[2],
         // 屏幕的顶点
+        // The vertex of the screen
         scrVertexBuffer;
     // 投影矩阵
+    // The projection matrix
     QMatrix4x4 projMat;
 
     void initializeGL();
